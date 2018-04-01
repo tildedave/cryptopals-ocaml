@@ -17,3 +17,16 @@ let range n =
     assert (n > 0);
     range_helper 0 n
 
+let slurp_file filename =
+  let ic = open_in filename in
+  let s = ref [] in
+  begin
+    try
+      while true do
+        let line = input_line ic in
+        s := line :: !s
+      done
+    with End_of_file ->
+      close_in ic
+  end;
+  List.rev (!s)

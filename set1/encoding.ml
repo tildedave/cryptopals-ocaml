@@ -40,22 +40,30 @@ let to_hex_string bytes =
 let to_base64_string bytes =
   let l = Bytes.length bytes in
   (* l * 8 = # bits *)
-  let s = Bytes.create ((l / 3) * 4) in
+  let pad_len = match l mod 3 with 0 -> 0 | 1 -> 2 | 2 -> 1 | _ -> failwith "impossible" in
+  let padded_bytes = Bytes.extend bytes 0 pad_len in
+  let len = ((l + pad_len) / 3 * 4) in
+  let s = Bytes.create len in
   let rec fill_string i j =
-    if j < l - 1 then
-      (* unpack 4 characters 3 at a time *)
-      (let (c1, c2, c3) = mapt3 (Bytes.get bytes) (j, j + 1, j + 2) in
-      let (b1, b2, b3, b4) = mapt4 int_to_base64_char (unpack6 c1 c2 c3) in
-      Bytes.set s i b1;
-      Bytes.set s (i + 1) b2;
-      Bytes.set s (i + 2) b3;
-      Bytes.set s (i + 3) b4;
-      fill_string (i + 4) (j + 3))
+    if j < l + pad_len then
+      begin
+        let (c1, c2, c3) = mapt3 (Bytes.get padded_bytes) (j, j + 1, j + 2) in
+        let (b1, b2, b3, b4) = mapt4 int_to_base64_char (unpack6 c1 c2 c3) in
+        Bytes.set s i b1;
+        Bytes.set s (i + 1) b2;
+        Bytes.set s (i + 2) b3;
+        Bytes.set s (i + 3) b4;
+        fill_string (i + 4) (j + 3)
+      end
     else
       ()
   in
-    assert (l mod 3 == 0);
     fill_string 0 0;
+    (* add final padding *)
+    (match pad_len with
+    | 1 -> Bytes.set s (len - 1) '=';
+    | 2 -> (Bytes.set s (len - 1) '='; Bytes.set s (len - 2) '=')
+    | _ -> ());
     Bytes.to_string s
 
 let from_hex_string str =
@@ -91,3 +99,11 @@ let from_base64_string str =
     assert (l mod 4 == 0);
     fill_bytes 0 0;
     b
+
+let _ =
+  Printf.printf("Starting!\n");
+  Printf.printf "%s\n" (to_base64_string (Bytes.of_string "any carnal pleasure."));
+  assert (String.equal (to_base64_string (Bytes.of_string "any carnal pleasure.")) "YW55IGNhcm5hbCBwbGVhc3VyZS4=");
+  assert (String.equal (to_base64_string (Bytes.of_string "any carnal pleasure")) "YW55IGNhcm5hbCBwbGVhc3VyZQ==");
+  Printf.printf("Done!\n")
+;;

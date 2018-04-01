@@ -69,27 +69,10 @@ How? Devise some method for "scoring" a piece of English plaintext. Character fr
 
 *)
 
-let choose_best_analysis vector_list =
-  let best_candidate = (0, -1000, Bytes.create 0) in
-  List.fold_right (fun vec best_candidate ->
-    let ta = Textanalysis.analyze_bytes (snd vec) in
-    let score = ta.num_vowels + ta.num_spaces in
-    let (_, best_so_far, _) = best_candidate in
-    if score > best_so_far then
-      (fst vec, score, snd vec)
-    else
-      best_candidate
-  ) vector_list best_candidate;;
-
-let brute_force_single_xor s1 = List.map (fun i ->
-    let s2 = Bytes.make (Bytes.length s1) (Char.chr i) in
-    (i, fixed_xor s1 s2)) (Util.range 256)
-
 let challenge3 () =
   Printf.printf "*** CHALLENGE 3: Single-byte XOR cipher ***\n";
   let s1 = from_hex_string "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736" in
-  let vector_list = brute_force_single_xor s1 in
-  let (i, s, candidate) = choose_best_analysis vector_list in
+  let (i, s, candidate) = Decrypto.brute_force_single_xor s1 in
   Printf.printf "Best candidate was %d (score: %d): %s\n" i s (Bytes.to_string candidate);
   assert (String.equal (Bytes.to_string candidate) "Cooking MC's like a pound of bacon");
   Printf.printf "🎉 All assertions complete! 🎉\n";;
@@ -107,21 +90,15 @@ Find it.
 
 let challenge4 () =
   Printf.printf "*** CHALLENGE 4: Detect single-character XOR ***\n";
-  let ic = open_in "4.txt" in
-  let overall_best = ref (0, -1000, Bytes.create 0) in
-  try
-    while true do
-      let line = input_line ic in
-      let (i, s, candidate) = choose_best_analysis (brute_force_single_xor (from_hex_string line)) in
-      let (_, best_score, _) = !overall_best in
-        if s > best_score then
-          overall_best := (i, s, candidate)
-        else
-          ()
-    done
-  with End_of_file ->
-    close_in ic;
-  let (i, s, candidate) = !overall_best in
+  let lines = Util.slurp_file "4.txt" in
+  let (i, s, candidate) = List.fold_left (fun best_so_far line ->
+      let (i, s, candidate) = Decrypto.brute_force_single_xor (from_hex_string line) in
+      let (_, best_score, _) = best_so_far in
+      if s > best_score then
+        (i, s, candidate)
+      else
+        best_so_far
+    ) (0, -1000, Bytes.create 0) lines in
   Printf.printf "Best candidate was %d (score: %d): %s\n" i s (Bytes.to_string candidate);
   assert (String.equal (Bytes.to_string candidate) "Now that the party is jumping\n");
   Printf.printf "🎉 All assertions complete! 🎉\n"
@@ -185,9 +162,10 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 *)
 
 let challenge6 () =
-  hamming_distance (Bytes.of_string "this is a test") (Bytes.of_string "wokka wokka!!!")
+  Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
+  let cipher = from_base64_string (List.fold_right (^) (Util.slurp_file "6.txt") "") in
+  cipher
 ;;
-
 (*
 challenge1 ();;
 challenge2 ();;
@@ -195,3 +173,4 @@ challenge3 ();;
 challenge4 ();;
 challenge5 ();;
 *)
+challenge6 ();;
