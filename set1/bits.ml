@@ -31,9 +31,13 @@ let unpack6 m n o =
     (* 6 LSB of b3 *)
     b3 land 0x3F)
 
+let lxor_char c1 c2 = Char.chr ((Char.code c1) lxor (Char.code c2))
+
 let fixed_xor bytes1 bytes2 =
     assert (Bytes.length bytes1 == Bytes.length bytes2);
-    Bytes.mapi (fun n b1 ->
-        let b2 = Bytes.get bytes2 n in
-        Char.chr ((Char.code b1) lxor (Char.code b2)))
-        bytes1
+    Bytes.mapi (fun n b1 -> lxor_char b1 (Bytes.get bytes2 n)) bytes1
+
+let repeating_key_xor bytes key =
+  let k_length = String.length key in
+  let r = ref 0 in
+  Bytes.mapi (fun n b -> lxor_char b key.[n mod k_length]) bytes
