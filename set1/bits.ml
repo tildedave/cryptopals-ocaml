@@ -34,10 +34,36 @@ let unpack6 m n o =
 let lxor_char c1 c2 = Char.chr ((Char.code c1) lxor (Char.code c2))
 
 let fixed_xor bytes1 bytes2 =
-    assert (Bytes.length bytes1 == Bytes.length bytes2);
-    Bytes.mapi (fun n b1 -> lxor_char b1 (Bytes.get bytes2 n)) bytes1
+  assert (Bytes.length bytes1 == Bytes.length bytes2);
+  Bytes.mapi (fun n b1 -> lxor_char b1 (Bytes.get bytes2 n)) bytes1
 
 let repeating_key_xor bytes key =
   let k_length = String.length key in
-  let r = ref 0 in
   Bytes.mapi (fun n b -> lxor_char b key.[n mod k_length]) bytes
+
+let num_set_bits n =
+  let rec num_set_bits_helper m i =
+    if m == 0 then
+      i
+    else
+      num_set_bits_helper (m lsr 1) (i + if m mod 2 == 1 then 1 else 0)
+  in
+    num_set_bits_helper n 0
+
+let hamming_distance bytes1 bytes2 =
+  assert (Bytes.length bytes1 == Bytes.length bytes2);
+  let d = ref 0 in
+  Bytes.iteri (fun n c1 ->
+    let (b1, b2) = mapt2 Char.code (c1, Bytes.get bytes2 n) in
+    let dist = b1 lxor b2 in
+    d := !d + (num_set_bits dist)) bytes1;
+  !d
+
+let _ =
+  assert (num_set_bits 3 == 2);
+  assert (num_set_bits 7 == 3);
+  assert (num_set_bits 8 == 1);
+  assert (num_set_bits 0 == 0);
+  assert (num_set_bits 15 == 4);
+  let (s1, s2) = (Bytes.of_string "this is a test", Bytes.of_string "wokka wokka!!!") in
+    assert ((hamming_distance s1 s2) == 37)
