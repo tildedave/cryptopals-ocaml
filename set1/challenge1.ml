@@ -23,16 +23,23 @@ module type PrettyPrint_type = sig
 end
 
 module PrettyPrint : PrettyPrint_type = struct
-  let hex_alphabet = "0123456789abcdef";;
+  let hex_alphabet = "0123456789abcdef"
   let base64_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
-  let pretty_char_to_hex c =
-    match c with
-    | '0' -> 0x0 | '1' -> 0x1 | '2' -> 0x2 | '3' -> 0x3 | '4' -> 0x4 | '5' -> 0x5 | '6' -> 0x6 | '7' -> 0x7
-    | '8' -> 0x8 | '9' -> 0x9 | 'a' -> 0xa | 'b' -> 0xb | 'c' -> 0xc | 'd' -> 0xd | 'e' -> 0xe | 'f' -> 0xf
-    | _   -> failwith ("Invalid pretty_char_to_hex: " ^ (String.make 1 c));;
+  let char_to_hex_tbl = Hashtbl.create (String.length hex_alphabet)
+  let char_to_base64_tbl = Hashtbl.create (String.length base64_alphabet)
 
-  let int_to_hex_char i = hex_alphabet.[i];;
+  let _ =
+    for i = 0 to String.length hex_alphabet - 1 do
+      Hashtbl.add char_to_hex_tbl hex_alphabet.[i] i
+    done;
+    for i = 0 to String.length base64_alphabet - 1 do
+      Hashtbl.add char_to_base64_tbl base64_alphabet.[i] i
+    done
+
+  let pretty_char_to_hex c = Hashtbl.find char_to_hex_tbl c
+
+  let int_to_hex_char i = hex_alphabet.[i]
 
   let to_hex_string bytes =
     let l = Bytes.length bytes in
@@ -48,9 +55,7 @@ module PrettyPrint : PrettyPrint_type = struct
       in
         assert (l mod 2 == 0);
         fill_string 0;
-        Bytes.to_string s;;
-
-    assert (pretty_char_to_hex 'f' == 15);;
+        Bytes.to_string s
 
     let from_hex_string str =
       let l = String.length str in
@@ -64,9 +69,10 @@ module PrettyPrint : PrettyPrint_type = struct
       in
         assert (l mod 2 == 0);
         fill_bytes 0;
-        b;;
+        b
 end
 
 open PrettyPrint;;
 
+assert (pretty_char_to_hex 'f' == 15);;
 assert (String.equal "4927" (to_hex_string (from_hex_string "4927")));;
