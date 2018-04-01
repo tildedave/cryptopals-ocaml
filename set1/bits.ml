@@ -30,3 +30,10 @@ let unpack6 m n o =
     ((b2 land 0xF) lsl 2) lxor (b3 lsr 6),
     (* 6 LSB of b3 *)
     b3 land 0x3F)
+
+let fixed_xor bytes1 bytes2 =
+    assert (Bytes.length bytes1 == Bytes.length bytes2);
+    Bytes.mapi (fun n b1 ->
+        let b2 = Bytes.get bytes2 n in
+        Char.chr ((Char.code b1) lxor (Char.code b2)))
+        bytes1
