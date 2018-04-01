@@ -1,3 +1,5 @@
+open Util
+
 (* pack 2 4 bit integers into 1 char *)
 let pack4 m n =
   assert (m land 0x0F == m);
