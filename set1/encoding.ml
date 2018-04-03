@@ -18,7 +18,7 @@ let _ =
 let hex_char_to_int c = Hashtbl.find char_to_hex_tbl c
 let int_to_hex_char i = hex_alphabet.[i]
 
-let base64_char_to_int c = Hashtbl.find char_to_base64_tbl c
+let base64_char_to_int c = if c == '=' then 0 else Hashtbl.find char_to_base64_tbl c
 let int_to_base64_char i = base64_alphabet.[i]
 
 let to_hex_string bytes =

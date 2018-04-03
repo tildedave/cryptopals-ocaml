@@ -2,7 +2,9 @@ type text_analysis = {
   vector: bytes;
   num_vowels: int;
   num_spaces: int;
-  most_frequent: char * int;
+  num_ascii_codes: int;
+  num_common: int;
+  most_frequent_10: char list;
   freq_mapping: (char, int) Hashtbl.t ;
 };;
 
@@ -12,17 +14,23 @@ let analyze_bytes bytes =
     if not (Hashtbl.mem h c) then
         Hashtbl.add h c 1
     else
-        Hashtbl.add h c ((Hashtbl.find h c) + 1)
+        Hashtbl.replace h c ((Hashtbl.find h c) + 1)
   ) bytes;
   let freq = List.sort (fun kv1 kv2 -> -1 * compare (snd kv1) (snd kv2)) (Util.hashtbl_items h) in
+  let sum_over_hash = fun acc c -> Util.hashtbl_find_with_default h c 0 + acc in
   { vector = bytes ;
+    num_ascii_codes = List.fold_left (fun acc k ->
+      Util.hashtbl_find_with_default h (Char.chr k) 0 + acc) 0 (Util.range 31 125);
     num_vowels = (
-      Util.hashtbl_find_with_default h 'a' 0 +
-      Util.hashtbl_find_with_default h 'e' 0 +
-      Util.hashtbl_find_with_default h 'i' 0 +
-      Util.hashtbl_find_with_default h 'o' 0 +
-      Util.hashtbl_find_with_default h 'u' 0 ) ;
+      List.fold_left sum_over_hash 0 ['a'; 'e'; 'i'; 'o'; 'u']
+    );
+    num_common = (
+      List.fold_left sum_over_hash 0 ['e';'t';'a';'o';'i';'n';'s';'r']
+    );
     num_spaces = Util.hashtbl_find_with_default h ' ' 0 ;
-    most_frequent = List.hd freq ;
+    most_frequent_10 = List.map fst (Util.take freq 10);
     freq_mapping = h
   }
+
+  let score ta = ta.num_common + ta.num_spaces
+

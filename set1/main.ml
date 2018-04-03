@@ -164,13 +164,15 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
   let cipher = from_base64_string (List.fold_right (^) (Util.slurp_file "6.txt") "") in
-  cipher
+  List.map (fun (ks, dist) ->
+    Printf.printf "ks=%d dist=%.2f\n" ks dist
+  ) (Decrypto.guess_keysize cipher 20);
+  Printf.printf "hi\n"
 ;;
-(*
+
 challenge1 ();;
 challenge2 ();;
 challenge3 ();;
 challenge4 ();;
 challenge5 ();;
-*)
 challenge6 ();;

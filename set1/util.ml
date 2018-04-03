@@ -10,12 +10,25 @@ let hashtbl_find_with_default h k d =
   | None -> d
   | Some v -> v
 
-let range n =
+let range m n =
   let rec range_helper i j =
     if i == j then [] else i :: range_helper (i + 1) j
   in
-    assert (n > 0);
-    range_helper 0 n
+    assert (m >= 0);
+    assert (n >= 0);
+    assert (m < n);
+    range_helper m n
+
+(* Not efficient ;) *)
+let implode cl = String.concat "" (List.map (String.make 1) cl);;
+
+let rec take l n =
+  if n = 0 then
+    []
+  else
+    match l with
+    | [] -> []
+    | x :: xs -> x :: (take xs (n - 1));;
 
 let slurp_file filename =
   let ic = open_in filename in
