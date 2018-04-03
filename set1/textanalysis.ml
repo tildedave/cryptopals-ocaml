@@ -2,7 +2,8 @@ type text_analysis = {
   vector: bytes;
   num_vowels: int;
   num_spaces: int;
-  num_ascii_codes: int;
+  num_alphabet: int;
+  num_non_alphabet: int;
   num_common: int;
   most_frequent_10: char list;
   freq_mapping: (char, int) Hashtbl.t ;
@@ -18,9 +19,11 @@ let analyze_bytes bytes =
   ) bytes;
   let freq = List.sort (fun kv1 kv2 -> -1 * compare (snd kv1) (snd kv2)) (Util.hashtbl_items h) in
   let sum_over_hash = fun acc c -> Util.hashtbl_find_with_default h c 0 + acc in
+  let num_alphabet = List.fold_left (fun acc k ->
+      Util.hashtbl_find_with_default h (Char.chr k) 0 + acc) 0 (Util.range 31 125) in
   { vector = bytes ;
-    num_ascii_codes = List.fold_left (fun acc k ->
-      Util.hashtbl_find_with_default h (Char.chr k) 0 + acc) 0 (Util.range 31 125);
+    num_alphabet = num_alphabet;
+    num_non_alphabet = Bytes.length bytes - num_alphabet ;
     num_vowels = (
       List.fold_left sum_over_hash 0 ['a'; 'e'; 'i'; 'o'; 'u']
     );
@@ -32,5 +35,5 @@ let analyze_bytes bytes =
     freq_mapping = h
   }
 
-  let score ta = ta.num_common + ta.num_spaces
+  let score ta = ta.num_common + ta.num_spaces + ta.num_vowels - ta.num_non_alphabet
 

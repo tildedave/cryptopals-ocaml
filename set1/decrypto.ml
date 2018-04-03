@@ -1,14 +1,14 @@
 open Bits
 
 let choose_best_analysis vector_list =
-  let best_candidate = (0, -1000, Bytes.create 0) in
+  let best_candidate = (0, -1000, -1000, Bytes.create 0) in
   List.fold_right (fun vec best_candidate ->
     let ta = Textanalysis.analyze_bytes (snd vec) in
     let score = Textanalysis.score ta in
-    let (_, best_so_far, _) = best_candidate in
+    let (_, best_so_far, _, _) = best_candidate in
     if score > best_so_far then
       begin
-        (fst vec, score, snd vec)
+        (fst vec, score, best_so_far, snd vec)
       end
     else
       best_candidate
@@ -29,6 +29,6 @@ let guess_keysize s keysize_max =
       (keysize,
         (List.fold_left (+.) 0.0
         (List.map
-          (fun (s1, s2) -> float (hamming_distance s1 s2) /. (float keysize))
+          (fun (s1, s2) -> float (hamming_distance s1 s2) /. (8.0 *. (float keysize)))
           [(s1, s2) ;  (s2, s3);  (s3, s4) ; (s4, s5)]) /. 4.0))
   ) (List.tl (Util.range 0 (keysize_max - 1)))

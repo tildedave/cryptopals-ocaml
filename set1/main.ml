@@ -72,8 +72,8 @@ How? Devise some method for "scoring" a piece of English plaintext. Character fr
 let challenge3 () =
   Printf.printf "*** CHALLENGE 3: Single-byte XOR cipher ***\n";
   let s1 = from_hex_string "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736" in
-  let (i, s, candidate) = Decrypto.brute_force_single_xor s1 in
-  Printf.printf "Best candidate was %d (score: %d): %s\n" i s (Bytes.to_string candidate);
+  let (i, s, loser, candidate) = Decrypto.brute_force_single_xor s1 in
+  Printf.printf "Best candidate was %d (score: %d; second-best: %d): %s\n" i s loser (Bytes.to_string candidate);
   assert (String.equal (Bytes.to_string candidate) "Cooking MC's like a pound of bacon");
   Printf.printf "🎉 All assertions complete! 🎉\n";;
 
@@ -92,7 +92,7 @@ let challenge4 () =
   Printf.printf "*** CHALLENGE 4: Detect single-character XOR ***\n";
   let lines = Util.slurp_file "4.txt" in
   let (i, s, candidate) = List.fold_left (fun best_so_far line ->
-      let (i, s, candidate) = Decrypto.brute_force_single_xor (from_hex_string line) in
+      let (i, s, _, candidate) = Decrypto.brute_force_single_xor (from_hex_string line) in
       let (_, best_score, _) = best_so_far in
       if s > best_score then
         (i, s, candidate)
@@ -164,10 +164,27 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
   let cipher = from_base64_string (List.fold_right (^) (Util.slurp_file "6.txt") "") in
-  List.map (fun (ks, dist) ->
+  (* guessing keysize is 5 from this:
+  *)
+  let _ = List.map (fun (ks, dist) ->
     Printf.printf "ks=%d dist=%.2f\n" ks dist
-  ) (Decrypto.guess_keysize cipher 20);
-  Printf.printf "hi\n"
+  ) (Decrypto.guess_keysize cipher 40) in
+  let guessed_keysize = 29 in
+  let buckets = Hashtbl.create guessed_keysize in
+  begin
+    List.iter (fun k -> Hashtbl.add buckets k Bytes.empty) (Util.range 0 guessed_keysize);
+    Bytes.iteri (fun n c ->
+      let k = n mod guessed_keysize in
+      let bucket = Hashtbl.find buckets k in
+      Printf.printf "%c\n";
+      Hashtbl.replace buckets k (Bytes.cat bucket (Bytes.make 1 c))
+    ) cipher;
+    Hashtbl.iter (fun k v ->
+      Printf.printf "k=%d len=%d\n" k (Bytes.length v);
+      let (i, s, loser, candidate) = Decrypto.brute_force_single_xor v in
+      Printf.printf "Bucket %d - best candidate was %d (score: %d; loser: %d): %s\n" k i s loser (Bytes.to_string candidate);
+    ) buckets
+  end
 ;;
 
 challenge1 ();;
