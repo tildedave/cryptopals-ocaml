@@ -164,13 +164,12 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
   let cipher = from_base64_string (List.fold_right (^) (Util.slurp_file "6.txt") "") in
-  (* guessing keysize is 5 from this:
-  *)
   let _ = List.map (fun (ks, dist) ->
     Printf.printf "ks=%d dist=%.2f\n" ks dist
   ) (Decrypto.guess_keysize cipher 40) in
   let guessed_keysize = 29 in
   let buckets = Hashtbl.create guessed_keysize in
+  let key = Bytes.create guessed_keysize in
   begin
     List.iter (fun k -> Hashtbl.add buckets k Bytes.empty) (Util.range 0 guessed_keysize);
     Bytes.iteri (fun n c ->
@@ -180,10 +179,16 @@ let challenge6 () =
       Hashtbl.replace buckets k (Bytes.cat bucket (Bytes.make 1 c))
     ) cipher;
     Hashtbl.iter (fun k v ->
-      Printf.printf "k=%d len=%d\n" k (Bytes.length v);
       let (i, s, loser, candidate) = Decrypto.brute_force_single_xor v in
+      (*
       Printf.printf "Bucket %d - best candidate was %d (score: %d; loser: %d): %s\n" k i s loser (Bytes.to_string candidate);
-    ) buckets
+      *)
+      Bytes.set key k (Char.chr i)
+    ) buckets;
+    Printf.printf "key=%s\n" (Bytes.to_string key);
+    let solution = repeating_key_xor cipher (Bytes.to_string key) in
+    assert (String.equal (Bytes.to_string key) "Terminator X: Bring the noise");
+    Printf.printf "🎉 All assertions complete! 🎉\n"
   end
 ;;
 
