@@ -1,5 +1,7 @@
-open Encoding
+open Batteries
 open Bits
+open Encoding
+open Cryptokit
 
 (*
 
@@ -91,7 +93,7 @@ Find it.
 let challenge4 () =
   Printf.printf "*** CHALLENGE 4: Detect single-character XOR ***\n";
   let lines = Util.slurp_file "4.txt" in
-  let (i, s, candidate) = List.fold_left (fun best_so_far line ->
+  let (i, s, candidate) = BatEnum.fold (fun best_so_far line ->
       let (i, s, _, candidate) = Decrypto.brute_force_single_xor (from_hex_string line) in
       let (_, best_score, _) = best_so_far in
       if s > best_score then
@@ -163,7 +165,7 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
-  let cipher = from_base64_string (List.fold_right (^) (Util.slurp_file "6.txt") "") in
+  let cipher = from_base64_string (BatEnum.fold (^) "" (Util.slurp_file "6.txt")) in
   let _ = List.map (fun (ks, dist) ->
     Printf.printf "ks=%d dist=%.2f\n" ks dist
   ) (Decrypto.guess_keysize cipher 40) in
@@ -188,13 +190,29 @@ let challenge6 () =
     Printf.printf "key=%s\n" (Bytes.to_string key);
     let solution = repeating_key_xor cipher (Bytes.to_string key) in
     assert (String.equal (Bytes.to_string key) "Terminator X: Bring the noise");
+    assert (String.exists (Bytes.to_string solution) "Play that funky music white boy");
     Printf.printf "🎉 All assertions complete! 🎉\n"
   end
 ;;
 
+
+let challenge7 () =
+  Printf.printf "*** CHALLENGE 7: AES in ECB mode ***\n";
+  let cipher = from_base64_string (BatEnum.fold (^) "" (Util.slurp_file "7.txt")) in
+  let key = "YELLOW SUBMARINE" in
+  let aes_encrypt = Cipher.aes ~mode:ECB key Cipher.Decrypt in
+  let s = transform_string aes_encrypt (Bytes.to_string cipher) in
+  Printf.printf "%s\n" s;
+  assert (String.exists s "Play that funky music white boy");
+  Printf.printf "🎉 All assertions complete! 🎉\n"
+;;
+
+(*
 challenge1 ();;
 challenge2 ();;
 challenge3 ();;
 challenge4 ();;
 challenge5 ();;
 challenge6 ();;
+*)
+challenge7 ();;
