@@ -100,10 +100,10 @@ let from_base64_string str =
     fill_bytes 0 0;
     b
 
-let _ =
-  Printf.printf("Starting!\n");
-  Printf.printf "%s\n" (to_base64_string (Bytes.of_string "any carnal pleasure."));
-  assert (String.equal (to_base64_string (Bytes.of_string "any carnal pleasure.")) "YW55IGNhcm5hbCBwbGVhc3VyZS4=");
-  assert (String.equal (to_base64_string (Bytes.of_string "any carnal pleasure")) "YW55IGNhcm5hbCBwbGVhc3VyZQ==");
-  Printf.printf("Done!\n")
-;;
+let pad_pkcs7 bytes blocklen =
+  let l = Bytes.length bytes in
+  assert (blocklen > l);
+  let padding_len = blocklen - l in
+  let b = (Bytes.extend bytes 0 padding_len) in
+  Bytes.fill b l padding_len (Char.chr padding_len);
+  b
