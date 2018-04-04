@@ -92,7 +92,7 @@ Find it.
 
 let challenge4 () =
   Printf.printf "*** CHALLENGE 4: Detect single-character XOR ***\n";
-  let lines = Util.slurp_file "4.txt" in
+  let lines = File.lines_of "4.txt" in
   let (i, s, candidate) = BatEnum.fold (fun best_so_far line ->
       let (i, s, _, candidate) = Decrypto.brute_force_single_xor (from_hex_string line) in
       let (_, best_score, _) = best_so_far in
@@ -165,22 +165,15 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
-  let cipher = from_base64_string (BatEnum.fold (^) "" (Util.slurp_file "6.txt")) in
+  let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "6.txt")) in
   let _ = List.map (fun (ks, dist) ->
     Printf.printf "ks=%d dist=%.2f\n" ks dist
   ) (Decrypto.guess_keysize cipher 40) in
   let guessed_keysize = 29 in
-  let buckets = Hashtbl.create guessed_keysize in
   let key = Bytes.create guessed_keysize in
+  let buckets = Util.split_bytes cipher guessed_keysize in
   begin
-    List.iter (fun k -> Hashtbl.add buckets k Bytes.empty) (Util.range 0 guessed_keysize);
-    Bytes.iteri (fun n c ->
-      let k = n mod guessed_keysize in
-      let bucket = Hashtbl.find buckets k in
-      Printf.printf "%c\n";
-      Hashtbl.replace buckets k (Bytes.cat bucket (Bytes.make 1 c))
-    ) cipher;
-    Hashtbl.iter (fun k v ->
+    List.iteri (fun k v ->
       let (i, s, loser, candidate) = Decrypto.brute_force_single_xor v in
       (*
       Printf.printf "Bucket %d - best candidate was %d (score: %d; loser: %d): %s\n" k i s loser (Bytes.to_string candidate);
@@ -195,24 +188,81 @@ let challenge6 () =
   end
 ;;
 
+(*
+
+Challenge 7 - AES in ECB mode
+The Base64-encoded content in this file has been encrypted via AES-128 in ECB mode under the key
+
+"YELLOW SUBMARINE".
+(case-sensitive, without the quotes; exactly 16 characters; I like "YELLOW SUBMARINE" because it's exactly 16 bytes long, and now you do too).
+
+Decrypt it. You know the key, after all.
+
+Easiest way: use OpenSSL::Cipher and give it AES-128-ECB as the cipher.
+
+
+*)
 
 let challenge7 () =
   Printf.printf "*** CHALLENGE 7: AES in ECB mode ***\n";
-  let cipher = from_base64_string (BatEnum.fold (^) "" (Util.slurp_file "7.txt")) in
+  let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "7.txt")) in
   let key = "YELLOW SUBMARINE" in
   let aes_encrypt = Cipher.aes ~mode:ECB key Cipher.Decrypt in
   let s = transform_string aes_encrypt (Bytes.to_string cipher) in
-  Printf.printf "%s\n" s;
   assert (String.exists s "Play that funky music white boy");
   Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
 
 (*
+
+Challenge 8 - Detect AES in ECB mode
+
+In this file are a bunch of hex-encoded ciphertexts.
+
+One of them has been encrypted with ECB.
+
+Detect it.
+
+Remember that the problem with ECB is that it is stateless and deterministic; the same 16 byte plaintext block will always produce the same 16 byte ciphertext.
+
+*)
+
+let challenge8 () =
+  let lines = BatEnum.map from_hex_string (File.lines_of "8.txt") in
+  let winners = List.sort
+    (fun k1 k2 -> -1 * compare (snd k1) (snd k2))
+    (List.of_enum (BatEnum.mapi (fun n b ->
+      let hash_blocks = Hashtbl.create 20 in
+      let reps = List.fold_left (+) 0 (List.map (fun block_size ->
+        let repeated = ref 0 in
+        for i = 0 to (Bytes.length b) - 1 - block_size do
+          let s = (Bytes.sub b i block_size) in
+          let v = (Hashtbl.find_default hash_blocks s 0) in
+          Hashtbl.replace hash_blocks s (v + 1);
+          if v > 0 then
+            repeated := !repeated + 1
+          else
+            ()
+        done;
+        if !repeated > 0 then
+          Printf.printf "line n=%d had %d repetitions at size %d\n" n !repeated block_size
+        else
+          ();
+        !repeated
+        ) (Util.range 3 30)) in
+        (n, reps)
+      ) lines)) in
+    let (winner, score) = List.hd winners in
+    Printf.printf "%d is the winner with score %d!\n" winner score;
+    assert (winner == 132);
+    Printf.printf "🎉 All assertions complete! 🎉\n"
+;;
+
 challenge1 ();;
 challenge2 ();;
 challenge3 ();;
 challenge4 ();;
 challenge5 ();;
 challenge6 ();;
-*)
 challenge7 ();;
+challenge8 ();;

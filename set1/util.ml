@@ -32,5 +32,13 @@ let rec take l n =
     | [] -> []
     | x :: xs -> x :: (take xs (n - 1));;
 
-let slurp_file filename =
-  File.lines_of filename
+let split_bytes bytes size =
+  let buckets = Hashtbl.create size in
+    List.iter (fun k -> Hashtbl.add buckets k Bytes.empty) (range 0 size);
+    Bytes.iteri (fun n c ->
+      let k = n mod size in
+      let bucket = Hashtbl.find buckets k in
+      (* this is stupid inefficient *)
+      Hashtbl.replace buckets k (Bytes.cat bucket (Bytes.make 1 c))
+    ) bytes;
+    List.fold_left (fun acc n -> Hashtbl.find buckets n :: acc) [] (List.rev (range 0 size))
