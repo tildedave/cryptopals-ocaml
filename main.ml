@@ -253,7 +253,8 @@ let challenge8 () =
         (n, reps)
       ) lines)) in
     let (winner, score) = List.hd winners in
-    Printf.printf "%d is the winner with score %d!\n" winner score;
+    let (_, runner_up_score) = List.nth winners 1 in
+    Printf.printf "%d is the winner with score %d! (runner_up_score: %d)\n" winner score runner_up_score;
     assert (winner == 132);
     Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
