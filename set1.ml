@@ -166,20 +166,12 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "6.txt")) in
-(*
-  let _ = List.map (fun (ks, dist) ->
-    Printf.printf "ks=%d = dist=%.2f " ks dist
-  ) (Decrypto.guess_keysize cipher 40) in
-*)
   let guessed_keysize = 29 in
   let key = Bytes.create guessed_keysize in
   let buckets = Util.split_bytes cipher guessed_keysize in
   begin
     List.iteri (fun k v ->
       let (i, s, loser, candidate) = Decrypto.brute_force_single_xor v in
-      (*
-      Printf.printf "Bucket %d - best candidate was %d (score: %d; loser: %d): %s\n" k i s loser (Bytes.to_string candidate);
-      *)
       Bytes.set key k (Char.chr i)
     ) buckets;
     Printf.printf "key=%s\n" (Bytes.to_string key);
