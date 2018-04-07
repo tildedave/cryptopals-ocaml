@@ -1,4 +1,5 @@
 open Util
+open Batteries
 
 (* pack 2 4 bit integers into 1 char *)
 let pack4 m n =
@@ -61,6 +62,9 @@ let hamming_distance bytes1 bytes2 =
     let dist = b1 lxor b2 in
     d := !d + (num_set_bits dist)) bytes1;
   !d
+
+let random_bytes keysize =
+  (Bytes.of_string (String.of_enum (Enum.take keysize (Random.enum_char ()))))
 
 let _ =
   assert (num_set_bits 3 == 2);

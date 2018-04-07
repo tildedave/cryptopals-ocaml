@@ -107,3 +107,11 @@ let pad_pkcs7 bytes blocklen =
   let b = (Bytes.extend bytes 0 padding_len) in
   Bytes.fill b l padding_len (Char.chr padding_len);
   b
+
+let pad_to_blocksize pad_func bytes blocksize =
+  let len = Bytes.length bytes in
+  if len mod blocksize == 0
+  then
+    bytes
+  else
+    pad_func bytes (len + (blocksize - len mod blocksize))

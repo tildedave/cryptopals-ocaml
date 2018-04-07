@@ -1,5 +1,6 @@
 open Encoding
 open Batteries
+open Util
 
 (*
 
@@ -43,13 +44,54 @@ The file here is intelligible (somewhat) when CBC decrypted against "YELLOW SUBM
 let challenge10 () =
   Printf.printf "*** CHALLENGE 2: Implement CBC mode ***\n";
   let iv = Bytes.make 16 (Char.chr 0) in
-  let s = Crypto.cbc_encrypt (Bytes.of_string "YELLOW SUBMARINE") "YELLOW SUBMARINE" iv in
-  let d = Crypto.cbc_decrypt s "YELLOW SUBMARINE" iv in
+  let s = Crypto.aes_cbc_encrypt (Bytes.of_string "YELLOW SUBMARINE") "YELLOW SUBMARINE" iv in
+  let d = Crypto.aes_cbc_decrypt s "YELLOW SUBMARINE" iv in
   assert (String.equal (Bytes.to_string d) "YELLOW SUBMARINE");
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "10.txt")) in
-  let decrypted = Crypto.cbc_decrypt cipher "YELLOW SUBMARINE" iv in
-  let reencrypted = Crypto.cbc_encrypt decrypted "YELLOW SUBMARINE" iv in
+  let decrypted = Crypto.aes_cbc_decrypt cipher "YELLOW SUBMARINE" iv in
+  let reencrypted = Crypto.aes_cbc_encrypt decrypted "YELLOW SUBMARINE" iv in
   assert (String.equal (to_hex_string cipher) (to_hex_string reencrypted));
   assert (String.exists (Bytes.to_string decrypted) "Play that funky music white boy");
   Printf.printf "🎉 All assertions complete! 🎉\n"
+;;
+
+
+(*
+
+Challenge 11 - An ECB/CBC detection oracle
+
+Now that you have ECB and CBC working:
+
+Write a function to generate a random AES key; that's just 16 random bytes.
+
+Write a function that encrypts data under an unknown key --- that is, a function that generates a random key and encrypts under it.
+
+The function should look like:
+
+encryption_oracle(your-input)
+=> [MEANINGLESS JIBBER JABBER]
+Under the hood, have the function append 5-10 bytes (count chosen randomly) before the plaintext and 5-10 bytes after the plaintext.
+
+Now, have the function choose to encrypt under ECB 1/2 the time, and under CBC the other half (just use random IVs each time for CBC). Use rand(2) to decide which to use.
+
+Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening.
+
+*)
+
+let challenge11 () =
+  Printf.printf "*** CHALLENGE 2: An ECB/CBC Detection Oracle ***\n";
+  Random.self_init ();
+  Printf.printf "%s\n" (Bytes.to_string (Bits.random_bytes 16));
+  let blocksize = 16 in
+  let encryption_oracle input =
+    let random_key = Bytes.to_string (Bits.random_bytes 16) in
+    let (prepend, append) = mapt2 Bits.random_bytes (Random.int 5 + 5, Random.int 5 + 5) in
+    let fuzzed_input = Bytes.cat (Bytes.cat prepend input) append in
+    let padded_input = pad_to_blocksize pad_pkcs7 fuzzed_input blocksize in
+    if Random.bool () then
+      Crypto.aes_cbc_encrypt padded_input random_key (Bytes.make 16 (Char.chr 0))
+    else
+      Crypto.aes_ecb_encrypt padded_input random_key
+  in
+    encryption_oracle (Bytes.of_string "bananas")
 ;;

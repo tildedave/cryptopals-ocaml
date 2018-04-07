@@ -9,4 +9,5 @@ let _ =
     Set1.challenge8();
     Set2.challenge9();
     Set2.challenge10();
+    Set2.challenge11();
 ;;

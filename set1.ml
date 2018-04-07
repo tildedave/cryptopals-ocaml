@@ -209,8 +209,7 @@ let challenge7 () =
   Printf.printf "*** CHALLENGE 7: AES in ECB mode ***\n";
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "7.txt")) in
   let key = "YELLOW SUBMARINE" in
-  let aes_encrypt = Cipher.aes ~mode:ECB key Cipher.Decrypt in
-  let s = transform_string aes_encrypt (Bytes.to_string cipher) in
+  let s = Bytes.to_string (Crypto.aes_ecb_decrypt cipher key) in
   assert (String.exists s "Play that funky music white boy");
   Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;

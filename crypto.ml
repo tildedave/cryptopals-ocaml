@@ -6,9 +6,10 @@ let aes_decrypt key = Cryptokit.Cipher.aes ~mode:ECB key Cryptokit.Cipher.Decryp
 let transform_bytes transform bytes =
   Bytes.of_string (Cryptokit.transform_string transform (Bytes.to_string bytes))
 
-(*let cbc_encrypt bytes key iv = cbc_process (aes_encrypt key) bytes iv*)
+let aes_ecb_encrypt bytes key = transform_bytes (aes_encrypt key) bytes
+let aes_ecb_decrypt bytes key = transform_bytes (aes_decrypt key) bytes
 
-let cbc_decrypt bytes key iv =
+let aes_cbc_decrypt bytes key iv =
   let bytes_len = Bytes.length bytes in
   let bytes_block = Bytes.create bytes_len in
   let block_size = 16 in
@@ -27,7 +28,7 @@ let cbc_decrypt bytes key iv =
     bytes_block
   end
 
-let cbc_encrypt bytes key iv =
+let aes_cbc_encrypt bytes key iv =
   let bytes_len = Bytes.length bytes in
   let bytes_block = Bytes.create bytes_len in
   let block_size = 16 in
