@@ -1,5 +1,4 @@
 let _ =
-(*
     Set1.challenge1();
     Set1.challenge2();
     Set1.challenge3();
@@ -8,6 +7,6 @@ let _ =
     Set1.challenge6();
     Set1.challenge7();
     Set1.challenge8();
-*)
-    Set2.challenge1()
+    Set2.challenge1();
+    Set2.challenge2();
 ;;

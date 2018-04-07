@@ -166,9 +166,11 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 let challenge6 () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "6.txt")) in
+(*
   let _ = List.map (fun (ks, dist) ->
-    Printf.printf "ks=%d dist=%.2f\n" ks dist
+    Printf.printf "ks=%d = dist=%.2f " ks dist
   ) (Decrypto.guess_keysize cipher 40) in
+*)
   let guessed_keysize = 29 in
   let key = Bytes.create guessed_keysize in
   let buckets = Util.split_bytes cipher guessed_keysize in
@@ -227,29 +229,27 @@ Remember that the problem with ECB is that it is stateless and deterministic; th
 
 *)
 
+let num_repetitions bytes block_size =
+  let hash_blocks = Hashtbl.create 20 in
+  let repeated = ref 0 in
+  for i = 0 to (Bytes.length bytes) - 1 - block_size do
+    let s = (Bytes.sub bytes i block_size) in
+    let v = (Hashtbl.find_default hash_blocks s 0) in
+    Hashtbl.replace hash_blocks s (v + 1);
+    if v > 0 then
+      repeated := !repeated + 1
+    else
+      ()
+  done;
+  !repeated
+
+
 let challenge8 () =
   let lines = BatEnum.map from_hex_string (File.lines_of "8.txt") in
   let winners = List.sort
     (fun k1 k2 -> -1 * compare (snd k1) (snd k2))
     (List.of_enum (BatEnum.mapi (fun n b ->
-      let hash_blocks = Hashtbl.create 20 in
-      let reps = List.fold_left (+) 0 (List.map (fun block_size ->
-        let repeated = ref 0 in
-        for i = 0 to (Bytes.length b) - 1 - block_size do
-          let s = (Bytes.sub b i block_size) in
-          let v = (Hashtbl.find_default hash_blocks s 0) in
-          Hashtbl.replace hash_blocks s (v + 1);
-          if v > 0 then
-            repeated := !repeated + 1
-          else
-            ()
-        done;
-        if !repeated > 0 then
-          Printf.printf "line n=%d had %d repetitions at size %d\n" n !repeated block_size
-        else
-          ();
-        !repeated
-        ) (Util.range 3 30)) in
+      let reps = List.fold_left (+) 0 (List.map (num_repetitions b) (Util.range 3 30)) in
         (n, reps)
       ) lines)) in
     let (winner, score) = List.hd winners in
@@ -258,12 +258,3 @@ let challenge8 () =
     assert (winner == 132);
     Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
-
-challenge1 ();;
-challenge2 ();;
-challenge3 ();;
-challenge4 ();;
-challenge5 ();;
-challenge6 ();;
-challenge7 ();;
-challenge8 ();;
