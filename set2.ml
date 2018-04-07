@@ -21,6 +21,7 @@ let challenge1 () =
   assert (Char.code(Bytes.get s 18) == 4);
   assert (Char.code(Bytes.get s 19) == 4);
   Printf.printf "%s %d\n" (Bytes.to_string s) (Bytes.length s);
+  Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
 
 (*
@@ -47,5 +48,8 @@ let challenge2 () =
   assert (String.equal (Bytes.to_string d) "YELLOW SUBMARINE");
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "10.txt")) in
   let decrypted = Crypto.cbc_decrypt cipher "YELLOW SUBMARINE" iv in
-  Printf.printf "%s\n" (Bytes.to_string decrypted)
+  let reencrypted = Crypto.cbc_encrypt decrypted "YELLOW SUBMARINE" iv in
+  assert (String.equal (to_hex_string cipher) (to_hex_string reencrypted));
+  assert (String.exists (Bytes.to_string decrypted) "Play that funky music white boy");
+  Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
