@@ -1,5 +1,8 @@
 open Bits
 
+type mode = CBC | ECB
+let mode_to_string mode = match mode with CBC -> "CBC" | ECB -> "ECB"
+
 let aes_encrypt key = Cryptokit.Cipher.aes ~mode:ECB key Cryptokit.Cipher.Encrypt
 let aes_decrypt key = Cryptokit.Cipher.aes ~mode:ECB key Cryptokit.Cipher.Decrypt
 

@@ -6,6 +6,13 @@ let mapt2 f (a, b) = (f a, f b)
 let mapt3 f (a, b, c) = (f a, f b, f c)
 let mapt4 f (a, b, c, d) = (f a, f b, f c, f d)
 
+let rec gcd n m = let r = n mod m in if r == 0 then m else gcd m r
+
+let _ =
+  assert ((gcd 6 2) == 2);
+  assert ((gcd 6 4) == 2);
+  assert ((gcd 15 13) == 1)
+
 let hashtbl_items h = Hashtbl.fold (fun k v l -> (k, v) :: l)  h []
 let hashtbl_find_with_default h k d =
   match Hashtbl.find_option h k with

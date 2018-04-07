@@ -1,6 +1,7 @@
 open Encoding
 open Batteries
 open Util
+open Crypto
 
 (*
 
@@ -23,9 +24,6 @@ Now, have the function choose to encrypt under ECB 1/2 the time, and under CBC t
 Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening.
 
 *)
-
-type mode = CBC | ECB
-let mode_to_string mode = match mode with CBC -> "CBC" | ECB -> "ECB"
 
 let encryption_oracle input =
   let random_key = Bytes.to_string (Bits.random_bytes 16) in
@@ -58,8 +56,3 @@ let run () =
   assert (!guessed_right == num_guesses);
   Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
-
-let challenge12 = () =
-  Printf.printf "*** CHALLENGE 11: An ECB/CBC Detection Oracle ***\n";
-  let magic_text = (BatEnum.fold (^) "" (File.lines_of "12.txt")) in
-  ()
