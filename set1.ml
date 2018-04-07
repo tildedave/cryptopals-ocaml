@@ -209,8 +209,10 @@ let challenge7 () =
   Printf.printf "*** CHALLENGE 7: AES in ECB mode ***\n";
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "7.txt")) in
   let key = "YELLOW SUBMARINE" in
-  let s = Bytes.to_string (Crypto.aes_ecb_decrypt cipher key) in
-  assert (String.exists s "Play that funky music white boy");
+  let plaintext = Crypto.aes_ecb_decrypt cipher key in
+  assert (String.exists (Bytes.to_string plaintext) "Play that funky music white boy");
+  let reencrypted = Crypto.aes_ecb_encrypt plaintext key in
+  assert (String.equal (to_hex_string cipher) (to_hex_string reencrypted));
   Printf.printf "🎉 All assertions complete! 🎉\n"
 ;;
 
@@ -228,22 +230,8 @@ Remember that the problem with ECB is that it is stateless and deterministic; th
 
 *)
 
-let num_repetitions bytes block_size =
-  let hash_blocks = Hashtbl.create 20 in
-  let repeated = ref 0 in
-  for i = 0 to (Bytes.length bytes) - 1 - block_size do
-    let s = (Bytes.sub bytes i block_size) in
-    let v = (Hashtbl.find_default hash_blocks s 0) in
-    Hashtbl.replace hash_blocks s (v + 1);
-    if v > 0 then
-      repeated := !repeated + 1
-    else
-      ()
-  done;
-  !repeated
-
-
 let challenge8 () =
+  Printf.printf "*** CHALLENGE 8: Detect AES in ECB mode ***\n";
   let lines = BatEnum.map from_hex_string (File.lines_of "8.txt") in
   let winners = List.sort
     (fun k1 k2 -> -1 * compare (snd k1) (snd k2))

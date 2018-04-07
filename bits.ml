@@ -66,6 +66,20 @@ let hamming_distance bytes1 bytes2 =
 let random_bytes keysize =
   (Bytes.of_string (String.of_enum (Enum.take keysize (Random.enum_char ()))))
 
+let num_repetitions bytes block_size =
+  let hash_blocks = Hashtbl.create 20 in
+  let repeated = ref 0 in
+  for i = 0 to (Bytes.length bytes) - 1 - block_size do
+    let s = Bytes.sub bytes i block_size in
+    let v = (Hashtbl.find_default hash_blocks s 0) in
+    Hashtbl.replace hash_blocks s (v + 1);
+    if v > 0 then
+      repeated := !repeated + 1
+    else
+      ()
+  done;
+  !repeated
+
 let _ =
   assert (num_set_bits 3 == 2);
   assert (num_set_bits 7 == 3);

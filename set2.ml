@@ -78,20 +78,50 @@ Detect the block cipher mode the function is using each time. You should end up 
 
 *)
 
+type mode = CBC | ECB
+let mode_to_string mode = match mode with CBC -> "CBC" | ECB -> "ECB"
+
+let encryption_oracle input force_ecb =
+  let random_key = Bytes.to_string (Bits.random_bytes 16) in
+  let (prepend, append) = mapt2 Bits.random_bytes (Random.int 5 + 5, Random.int 5 + 5) in
+  let fuzzed_input = Bytes.cat (Bytes.cat prepend input) append in
+  let padded_input = pad_to_blocksize pad_pkcs7 input 16 in
+  if Random.bool () || force_ecb then
+    (ECB, Crypto.aes_ecb_encrypt padded_input random_key)
+  else
+    (CBC, Crypto.aes_cbc_encrypt padded_input random_key (Bytes.make 16 (Char.chr 0)))
+
 let challenge11 () =
   Printf.printf "*** CHALLENGE 2: An ECB/CBC Detection Oracle ***\n";
   Random.self_init ();
-  Printf.printf "%s\n" (Bytes.to_string (Bits.random_bytes 16));
-  let blocksize = 16 in
-  let encryption_oracle input =
-    let random_key = Bytes.to_string (Bits.random_bytes 16) in
-    let (prepend, append) = mapt2 Bits.random_bytes (Random.int 5 + 5, Random.int 5 + 5) in
-    let fuzzed_input = Bytes.cat (Bytes.cat prepend input) append in
-    let padded_input = pad_to_blocksize pad_pkcs7 fuzzed_input blocksize in
-    if Random.bool () then
-      Crypto.aes_cbc_encrypt padded_input random_key (Bytes.make 16 (Char.chr 0))
-    else
-      Crypto.aes_ecb_encrypt padded_input random_key
-  in
-    encryption_oracle (Bytes.of_string "bananas")
+  let s = Crypto.aes_ecb_encrypt (Bytes.of_string "YELLOW SUBMARINE") "YELLOW SUBMARINE" in
+  let d = Crypto.aes_ecb_decrypt s "YELLOW SUBMARINE" in
+  assert (String.equal (Bytes.to_string d) "YELLOW SUBMARINE");
+  let sample = Bytes.of_string (BatEnum.fold (^) "" (File.lines_of "lorem.txt")) in
+  let percent_repetitions cipher size =
+    let num_repetitions = Bits.num_repetitions cipher size in
+    let num_blocks = (Bytes.length cipher) / size in
+    Printf.printf "-> %d %d %d %.4f\n" size num_repetitions num_blocks (float(num_repetitions) /. float(num_blocks));
+    float(num_repetitions) /. float(num_blocks) in
+  for i = 1 to 4 do
+    let (mode, ciphertext) = encryption_oracle sample true in
+    let _ = Printf.printf "%s\n" (mode_to_string mode) in
+    (List.iter (fun n ->
+      Printf.printf "-> %d %d\n"
+      n
+      (Bits.num_repetitions ciphertext n)) (Util.range 3 30))
+(*         let threshold = 0.01 in
+        let guess =
+          match List.find_opt
+            (fun p -> p > threshold)
+            (List.map (percent_repetitions ciphertext) (Util.range 3 30)) with
+          | None -> CBC
+          | (Some _) -> ECB
+        in
+          ()
+ *)(*           if guess == mode then
+            Printf.printf "Guessed correctly! :) mode=%s, guess=%s\n" (mode_to_string mode) (mode_to_string guess)
+          else
+            Printf.printf "Guessed incorrectly! :( mode=%s, guess=%s\n" (mode_to_string mode) (mode_to_string guess)
+ *)      done
 ;;
