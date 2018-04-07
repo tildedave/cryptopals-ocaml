@@ -1,13 +1,13 @@
 let _ =
-    Set1.challenge1();
-    Set1.challenge2();
-    Set1.challenge3();
-    Set1.challenge4();
-    Set1.challenge5();
-    Set1.challenge6();
-    Set1.challenge7();
-    Set1.challenge8();
-    Set2.challenge9();
-    Set2.challenge10();
-    Set2.challenge11();
+    Challenge1.run();
+    Challenge2.run();
+    Challenge3.run();
+    Challenge4.run();
+    Challenge5.run();
+    Challenge6.run();
+    Challenge7.run();
+    Challenge8.run();
+    Challenge9.run();
+    Challenge10.run();
+    Challenge11.run()
 ;;
