@@ -13,7 +13,7 @@ So: pad any block to a specific block length, by appending the number of bytes o
 
 *)
 
-let challenge1 () =
+let challenge9 () =
   Printf.printf "*** CHALLENGE 1: Implement PKCS#7 padding ***\n";
   let s = pad_pkcs7 (Bytes.of_string "YELLOW SUBMARINE") 20 in
   assert (Char.code(Bytes.get s 16) == 4);
@@ -40,7 +40,7 @@ The file here is intelligible (somewhat) when CBC decrypted against "YELLOW SUBM
 
 *)
 
-let challenge2 () =
+let challenge10 () =
   Printf.printf "*** CHALLENGE 2: Implement CBC mode ***\n";
   let iv = Bytes.make 16 (Char.chr 0) in
   let s = Crypto.cbc_encrypt (Bytes.of_string "YELLOW SUBMARINE") "YELLOW SUBMARINE" iv in

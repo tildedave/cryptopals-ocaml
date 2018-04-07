@@ -7,6 +7,6 @@ let _ =
     Set1.challenge6();
     Set1.challenge7();
     Set1.challenge8();
-    Set2.challenge1();
-    Set2.challenge2();
+    Set2.challenge9();
+    Set2.challenge10();
 ;;
