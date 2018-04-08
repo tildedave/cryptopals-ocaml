@@ -49,29 +49,33 @@ let get_ecb_pattern_block bytes blocksize =
   let i = find_first_repeat bytes 0 blocksize in
   Bytes.sub bytes i blocksize
 
-(* goal is to see if we can get a block that matches the end block by inserting our own padding
-     at the start, then  *)
 let guess_byte known blocksize repetition_table =
+  let i = Bytes.length known in
+  let pathological_block = Bytes.make blocksize 'A' in
+  let pathological_size = 256 in
+  Bytes.blit known 0 pathological_block (blocksize - i - 1) i;
   let rec helper c =
     assert (c < 256);
-    let pathological_block, pathological_size = Bytes.make blocksize 'A', 256 in
-    (* TODO copy appropriate block from known *)
     Bytes.set pathological_block (blocksize - 1) (Char.chr c);
     let repeated_block_input = Bits.repeat_block pathological_block (pathological_size / blocksize) in
     let num_iterations = 500 in
     let repetitions = ref 0 in
+    let matched_block = ref (Bytes.create 0) in
     for i = 0 to num_iterations do
       let padsize = Random.int blocksize in
       let chopped_input = Bytes.sub repeated_block_input padsize (Bytes.length repeated_block_input - padsize) in
       let pattern_block = get_ecb_pattern_block (encryption_oracle chopped_input) blocksize in
       if Hashtbl.mem repetition_table pattern_block then
-        repetitions := (!repetitions) + 1
+        begin
+          repetitions := (!repetitions) + 1;
+          matched_block := pattern_block
+        end
       else
         ()
     done;
     if !repetitions > 0 then
       (* done, found it *)
-      c
+      (Hashtbl.remove repetition_table !matched_block; c)
     else
       helper (c + 1) in
   helper 0
@@ -103,5 +107,8 @@ let run () =
     else
       ()
   ) repetition_table;
-  Printf.printf "%d\n" (guess_byte (Bytes.create 0) blocksize repetition_table);
+  let b1 = guess_byte (Bytes.create 0) blocksize repetition_table in
+  Printf.printf "%c\n" (Char.chr b1);
+  let b2 = guess_byte (Bytes.make 1 (Char.chr b1)) blocksize repetition_table in
+  Printf.printf "%d %d\n" b1 b2;
   ()
