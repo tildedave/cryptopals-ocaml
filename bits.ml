@@ -84,6 +84,14 @@ let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
 
 let first_block bytes = nth_block bytes 0
 
+let repeat_block block i =
+  let blocksize = Bytes.length block in
+  let bytes = Bytes.create (blocksize * i) in
+  for j = 0 to i - 1 do
+    Bytes.blit block 0 bytes (j * blocksize) blocksize
+  done;
+  bytes
+
 let _ =
   assert (num_set_bits 3 == 2);
   assert (num_set_bits 7 == 3);
