@@ -39,7 +39,7 @@ let random_key = Bytes.to_string (Bits.random_bytes 16)
 let magic_text = (BatEnum.fold (^) "" (File.lines_of "12.txt"))
 
 let encryption_oracle input =
-  let combined_input = (Bytes.cat input (Bytes.of_string magic_text)) in
+  let combined_input = (Bytes.cat input (from_base64_string magic_text)) in
   let padded_input = pad_to_blocksize pad_pkcs7 combined_input 16 in
   Crypto.aes_ecb_encrypt padded_input random_key
 
@@ -51,27 +51,62 @@ let guess_blocksize encryption_func =
     (Bytes.length (encryption_func (Bytes.create 0)))
     (Util.range 1 64)
 
+let guess_secret_length encryption_func =
+  let i, cont = ref 0, ref true in
+  let initial_cipher = (encryption_func (Bytes.create 0)) in
+  let last_cipher = ref initial_cipher in
+  while (!i) < 64 && !cont do
+    let cipher = encryption_func (Bytes.make (!i) 'A') in
+    if Bytes.length cipher > Bytes.length (!last_cipher) then
+      cont := false
+    else
+      begin
+        i := !i + 1;
+        last_cipher := cipher
+      end
+  done;
+  assert (!i < 64);
+  (Bytes.length initial_cipher) - !i + 1
+
 let is_ecb encryption_func blocksize =
   let pathological_input = Bytes.make 1024 'A' in
   Bits.num_repetitions (encryption_func pathological_input) blocksize > 0
 
+let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
+
+let first_block bytes = nth_block bytes 0
+
+let guess_byte known blocksize =
+  let i = Bytes.length known in
+  let which_block = i / blocksize in
+  let bytes = Bytes.make (blocksize * (which_block + 1)) 'A' in
+  let num_bytes = Bytes.length bytes in
+  Bytes.blit known 0 bytes (num_bytes - i - 1) i;
+  let all_options_hash = Hashtbl.create 256 in
+  for c = 0 to 255 do
+    Bytes.set bytes (num_bytes - 1) (Char.chr c);
+    let encrypted_block = nth_block (encryption_oracle bytes) which_block blocksize in
+    Hashtbl.replace all_options_hash encrypted_block c
+  done;
+  assert ((Hashtbl.length all_options_hash) == 256);
+  let input = (Bytes.make (num_bytes - i - 1) 'A') in
+  let block = nth_block (encryption_oracle input) which_block blocksize in
+  Hashtbl.find all_options_hash block
+
 let run () =
   Printf.printf "*** CHALLENGE 12: Byte-at-a-time ECB decryption (Simple) ***\n";
   let blocksize = guess_blocksize encryption_oracle in
-  let first_block bytes = Bytes.sub bytes 0 blocksize in
   if is_ecb encryption_oracle blocksize then
     begin
-      let all_options_hash = Hashtbl.create 256 in
-      let bytes = Bytes.make blocksize 'A' in
-      for i = 0 to 255 do
-        Bytes.set bytes (blocksize - 1) (Char.chr i);
-        let encrypted_block = first_block (encryption_oracle bytes) in
-        Hashtbl.replace all_options_hash encrypted_block i
-      done;
-      let block = (first_block (encryption_oracle (Bytes.make (blocksize - 1) 'A'))) in
-      let guessed_first_byte = Hashtbl.find all_options_hash block in
-      Printf.printf "Guessed first byte is %d\n" guessed_first_byte
+      let secret_length = guess_secret_length encryption_oracle in
+      let decrypted = List.fold_left (fun bytes n ->
+        let b = guess_byte bytes blocksize in
+        Bytes.cat bytes (Bytes.make 1 (Char.chr b)))
+        (Bytes.create 0)
+        (Util.range 0 secret_length) in
+        assert (String.equal (Bytes.to_string decrypted) (Bytes.to_string (from_base64_string magic_text)))
     end
   else
     assert false;
-  ()
+  ();
+  Printf.printf "🎉 All assertions complete! 🎉\n"
