@@ -32,3 +32,15 @@ let guess_keysize s keysize_max =
           (fun (s1, s2) -> float (hamming_distance s1 s2) /. (8.0 *. (float keysize)))
           [(s1, s2) ;  (s2, s3);  (s3, s4) ; (s4, s5)]) /. 4.0))
   ) (List.tl (Util.range 0 (keysize_max - 1)))
+
+let guess_blocksize encryption_func =
+  List.fold_left
+    (fun acc n ->
+      let input = Bytes.make n 'A' in
+      Util.gcd acc (Bytes.length (encryption_func input)))
+    (Bytes.length (encryption_func (Bytes.create 0)))
+    (Util.range 1 64)
+
+let is_ecb encryption_func blocksize =
+  let pathological_input = Bytes.make 1024 'A' in
+  Bits.num_repetitions (encryption_func pathological_input) blocksize > 0

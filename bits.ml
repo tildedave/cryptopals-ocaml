@@ -80,6 +80,10 @@ let num_repetitions bytes block_size =
   done;
   !repeated
 
+let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
+
+let first_block bytes = nth_block bytes 0
+
 let _ =
   assert (num_set_bits 3 == 2);
   assert (num_set_bits 7 == 3);

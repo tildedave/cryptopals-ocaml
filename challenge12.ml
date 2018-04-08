@@ -43,14 +43,6 @@ let encryption_oracle input =
   let padded_input = pad_to_blocksize pad_pkcs7 combined_input 16 in
   Crypto.aes_ecb_encrypt padded_input random_key
 
-let guess_blocksize encryption_func =
-  List.fold_left
-    (fun acc n ->
-      let input = Bytes.make n 'A' in
-      gcd acc (Bytes.length (encryption_func input)))
-    (Bytes.length (encryption_func (Bytes.create 0)))
-    (Util.range 1 64)
-
 let guess_secret_length encryption_func =
   let i, cont = ref 0, ref true in
   let initial_cipher = (encryption_func (Bytes.create 0)) in
@@ -68,14 +60,6 @@ let guess_secret_length encryption_func =
   assert (!i < 64);
   (Bytes.length initial_cipher) - !i + 1
 
-let is_ecb encryption_func blocksize =
-  let pathological_input = Bytes.make 1024 'A' in
-  Bits.num_repetitions (encryption_func pathological_input) blocksize > 0
-
-let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
-
-let first_block bytes = nth_block bytes 0
-
 let guess_byte known blocksize =
   let i = Bytes.length known in
   let which_block = i / blocksize in
@@ -85,18 +69,18 @@ let guess_byte known blocksize =
   let all_options_hash = Hashtbl.create 256 in
   for c = 0 to 255 do
     Bytes.set bytes (num_bytes - 1) (Char.chr c);
-    let encrypted_block = nth_block (encryption_oracle bytes) which_block blocksize in
+    let encrypted_block = Bits.nth_block (encryption_oracle bytes) which_block blocksize in
     Hashtbl.replace all_options_hash encrypted_block c
   done;
   assert ((Hashtbl.length all_options_hash) == 256);
   let input = (Bytes.make (num_bytes - i - 1) 'A') in
-  let block = nth_block (encryption_oracle input) which_block blocksize in
+  let block = Bits.nth_block (encryption_oracle input) which_block blocksize in
   Hashtbl.find all_options_hash block
 
 let run () =
   Printf.printf "*** CHALLENGE 12: Byte-at-a-time ECB decryption (Simple) ***\n";
-  let blocksize = guess_blocksize encryption_oracle in
-  if is_ecb encryption_oracle blocksize then
+  let blocksize = Decrypto.guess_blocksize encryption_oracle in
+  if Decrypto.is_ecb encryption_oracle blocksize then
     begin
       let secret_length = guess_secret_length encryption_oracle in
       let decrypted = List.fold_left (fun bytes n ->
