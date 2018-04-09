@@ -64,20 +64,21 @@ let guess_secret_length encryption_func blocksize prefix_length =
   with Exit ->
   begin
     assert (!i < 64);
-    (Bytes.length initial_cipher) - !i + 1 - ((blocksize - prefix_length) mod blocksize)
+    (Bytes.length initial_cipher) - !i + 1 - prefix_length
   end
 
 let guess_byte encryption_func known prefix_length blocksize =
   let i = Bytes.length known in
   let which_block = i / blocksize in
-  let prefix = Bytes.make (blocksize - prefix_length) '0' in
-  let bytes = Bytes.cat prefix (Bytes.make (blocksize * (which_block + 1)) 'A') in
+  let prefix_block = Bytes.make (blocksize - prefix_length) '0' in
+  let bytes = Bytes.cat prefix_block (Bytes.make (blocksize * (which_block + 1)) 'A') in
   let num_bytes = Bytes.length bytes in
   Bytes.blit known 0 bytes (num_bytes - i - 1) i;
   let all_options_hash = Hashtbl.create 256 in
   for c = 0 to 255 do
     Bytes.set bytes (num_bytes - 1) (Char.chr c);
-    let encrypted_block = Bits.nth_block (encryption_func bytes) (which_block + 1) blocksize in
+    let ciphertext = (encryption_func bytes) in
+    let encrypted_block = Bits.nth_block ciphertext (which_block + 1) blocksize in
     Hashtbl.replace all_options_hash encrypted_block c
   done;
   assert ((Hashtbl.length all_options_hash) == 256);

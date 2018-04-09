@@ -45,19 +45,21 @@ let find_prefix_length encryption_func blocksize =
         i := !i + 1
     done;
     assert false
-  with Exit -> !i
+  with Exit -> blocksize - !i
 
 let run () =
   Printf.printf "*** CHALLENGE 14: Byte-at-a-time ECB decryption (Harder) ***\n";
   let blocksize = Decrypto.guess_blocksize encryption_oracle in
   let prefix_length = find_prefix_length encryption_oracle blocksize in
   let secret_length = guess_secret_length encryption_oracle blocksize prefix_length in
-  Printf.printf "%d %d %d\n" blocksize prefix_length secret_length;
+  Printf.printf "guessed secret length = %d actual secret length = %d prefix = %d\n"
+    secret_length
+    (Bytes.length (from_base64_string magic_text))
+    prefix_length;
   let decrypted = List.fold_left (fun bytes n ->
     let b = guess_byte encryption_oracle bytes prefix_length blocksize in
     Bytes.cat bytes (Bytes.make 1 (Char.chr b)))
     (Bytes.create 0)
-    (Util.range 0 20) in
-  Printf.printf "%s\n" (Bytes.to_string decrypted);
+    (Util.range 0 secret_length) in
   assert (String.equal (Bytes.to_string decrypted) (Bytes.to_string (from_base64_string magic_text)));
   ()
