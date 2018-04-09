@@ -1,5 +1,6 @@
 open Batteries
 open Crypto
+open Decrypto
 open Encoding
 open Util
 
@@ -43,48 +44,14 @@ let encryption_oracle input =
   let padded_input = pad_to_blocksize pad_pkcs7 combined_input 16 in
   Crypto.aes_ecb_encrypt padded_input random_key
 
-let guess_secret_length encryption_func =
-  let i, cont = ref 0, ref true in
-  let initial_cipher = (encryption_func (Bytes.create 0)) in
-  let last_cipher = ref initial_cipher in
-  while (!i) < 64 && !cont do
-    let cipher = encryption_func (Bytes.make (!i) 'A') in
-    if Bytes.length cipher > Bytes.length (!last_cipher) then
-      cont := false
-    else
-      begin
-        i := !i + 1;
-        last_cipher := cipher
-      end
-  done;
-  assert (!i < 64);
-  (Bytes.length initial_cipher) - !i + 1
-
-let guess_byte known blocksize =
-  let i = Bytes.length known in
-  let which_block = i / blocksize in
-  let bytes = Bytes.make (blocksize * (which_block + 1)) 'A' in
-  let num_bytes = Bytes.length bytes in
-  Bytes.blit known 0 bytes (num_bytes - i - 1) i;
-  let all_options_hash = Hashtbl.create 256 in
-  for c = 0 to 255 do
-    Bytes.set bytes (num_bytes - 1) (Char.chr c);
-    let encrypted_block = Bits.nth_block (encryption_oracle bytes) which_block blocksize in
-    Hashtbl.replace all_options_hash encrypted_block c
-  done;
-  assert ((Hashtbl.length all_options_hash) == 256);
-  let input = (Bytes.make (num_bytes - i - 1) 'A') in
-  let block = Bits.nth_block (encryption_oracle input) which_block blocksize in
-  Hashtbl.find all_options_hash block
-
 let run () =
   Printf.printf "*** CHALLENGE 12: Byte-at-a-time ECB decryption (Simple) ***\n";
-  let blocksize = Decrypto.guess_blocksize encryption_oracle in
-  if Decrypto.is_ecb encryption_oracle blocksize then
+  let blocksize = guess_blocksize encryption_oracle in
+  if is_ecb encryption_oracle blocksize then
     begin
-      let secret_length = guess_secret_length encryption_oracle in
+      let secret_length = guess_secret_length encryption_oracle blocksize 0 in
       let decrypted = List.fold_left (fun bytes n ->
-        let b = guess_byte bytes blocksize in
+        let b = guess_byte encryption_oracle bytes 0 blocksize in
         Bytes.cat bytes (Bytes.make 1 (Char.chr b)))
         (Bytes.create 0)
         (Util.range 0 secret_length) in

@@ -44,3 +44,44 @@ let guess_blocksize encryption_func =
 let is_ecb encryption_func blocksize =
   let pathological_input = Bytes.make 1024 'A' in
   Bits.num_repetitions (encryption_func pathological_input) blocksize > 0
+
+let guess_secret_length encryption_func blocksize prefix_length =
+  let i = ref 0 in
+  let initial_cipher = encryption_func (Bytes.create 0) in
+  let last_cipher = ref initial_cipher in
+  try
+    while !i < 64 do
+      let cipher = encryption_func (Bytes.make (!i) 'A') in
+      if Bytes.length cipher > Bytes.length (!last_cipher) then
+        raise Exit
+      else
+        begin
+          i := !i + 1;
+          last_cipher := cipher
+        end
+    done;
+    assert false
+  with Exit ->
+  begin
+    assert (!i < 64);
+    (Bytes.length initial_cipher) - !i + 1 - ((blocksize - prefix_length) mod blocksize)
+  end
+
+let guess_byte encryption_func known prefix_length blocksize =
+  let i = Bytes.length known in
+  let which_block = i / blocksize in
+  let prefix = Bytes.make (blocksize - prefix_length) '0' in
+  let bytes = Bytes.cat prefix (Bytes.make (blocksize * (which_block + 1)) 'A') in
+  let num_bytes = Bytes.length bytes in
+  Bytes.blit known 0 bytes (num_bytes - i - 1) i;
+  let all_options_hash = Hashtbl.create 256 in
+  for c = 0 to 255 do
+    Bytes.set bytes (num_bytes - 1) (Char.chr c);
+    let encrypted_block = Bits.nth_block (encryption_func bytes) (which_block + 1) blocksize in
+    Hashtbl.replace all_options_hash encrypted_block c
+  done;
+  assert ((Hashtbl.length all_options_hash) == 256);
+  (* should not need to return the prefix here *)
+  let input = (Bytes.make (num_bytes - i - 1) 'A') in
+  let block = Bits.nth_block (encryption_func input) (which_block + 1) blocksize in
+  Hashtbl.find all_options_hash block
