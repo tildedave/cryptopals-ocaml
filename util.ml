@@ -7,6 +7,7 @@ let mapt3 f (a, b, c) = (f a, f b, f c)
 let mapt4 f (a, b, c, d) = (f a, f b, f c, f d)
 
 let rec gcd n m = let r = n mod m in if r == 0 then m else gcd m r
+let imod m n = let a = m mod n in if a < 0 then a + n else a
 
 let _ =
   assert ((gcd 6 2) == 2);
