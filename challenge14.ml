@@ -38,11 +38,17 @@ let rec find_last_repeat bytes i blocksize =
   else
     i
 
-let get_ecb_end_block bytes blocksize =
+let get_cipher_blocks bytes blocksize =
   (* Take an array of pathological input and find the first block that deviates from the pattern *)
   let i = find_first_repeat bytes 0 blocksize in
   let j = find_last_repeat bytes i blocksize in
-  Bytes.sub bytes (j + blocksize) blocksize
+  let blocks = ref [] in
+  let k = ref (Bytes.length bytes - blocksize) in
+  while !k > j do
+    blocks := (Bytes.sub bytes !k blocksize) :: !blocks;
+    k := !k - blocksize
+  done;
+  !blocks
 
 let get_ecb_pattern_block bytes blocksize =
   (* Take an array of pathological input and find the block that forms the pattern *)
@@ -51,33 +57,31 @@ let get_ecb_pattern_block bytes blocksize =
 
 let guess_byte known blocksize repetition_table =
   let i = Bytes.length known in
+  let which_block = i / blocksize in
   let pathological_block = Bytes.make blocksize 'A' in
-  let pathological_size = 256 in
-  Bytes.blit known 0 pathological_block (blocksize - i - 1) i;
+  let pathological_size = 128 in
+  if i >= blocksize then
+    Bytes.blit known (i - blocksize + 1) pathological_block 0 (blocksize - 1)
+  else
+    Bytes.blit known 0 pathological_block (blocksize - i - 1) i;
   let rec helper c =
-    assert (c < 256);
     Bytes.set pathological_block (blocksize - 1) (Char.chr c);
     let repeated_block_input = Bits.repeat_block pathological_block (pathological_size / blocksize) in
-    let num_iterations = 500 in
-    let repetitions = ref 0 in
-    let matched_block = ref (Bytes.create 0) in
-    for i = 0 to num_iterations do
-      let padsize = Random.int blocksize in
-      let chopped_input = Bytes.sub repeated_block_input padsize (Bytes.length repeated_block_input - padsize) in
-      let pattern_block = get_ecb_pattern_block (encryption_oracle chopped_input) blocksize in
-      if Hashtbl.mem repetition_table pattern_block then
-        begin
-          repetitions := (!repetitions) + 1;
-          matched_block := pattern_block
-        end
+    let num_iterations = 200 in
+    let rec find_repetition i =
+      if i > num_iterations then
+        None
       else
-        ()
-    done;
-    if !repetitions > 0 then
-      (* done, found it *)
-      (Hashtbl.remove repetition_table !matched_block; c)
-    else
-      helper (c + 1) in
+        let padsize = Random.int blocksize in
+        let chopped_input = Bytes.sub repeated_block_input padsize (Bytes.length repeated_block_input - padsize) in
+        let pattern_block = get_ecb_pattern_block (encryption_oracle chopped_input) blocksize in
+        if Hashtbl.mem repetition_table pattern_block then
+          Some pattern_block
+        else
+          find_repetition (i + 1) in
+    match find_repetition 0 with
+    | None -> if c < 255 then helper (c + 1) else None
+    | Some matched_block -> (Hashtbl.remove repetition_table matched_block; Some c) in
   helper 0
 
 let run () =
@@ -86,29 +90,22 @@ let run () =
   (* for different random padding we will need larger pathological size inputs *)
   let pathological_size = 256 in
   let pathological_input = Bytes.make pathological_size 'A' in
-  let test_ciphertext = (encryption_oracle pathological_input) in
-  Printf.printf "%s pattern block: %s end block: %s\n"
-    (to_hex_string test_ciphertext)
-    (to_hex_string (get_ecb_pattern_block test_ciphertext blocksize))
-    (to_hex_string (get_ecb_end_block test_ciphertext blocksize));
   let repetition_table = Hashtbl.create 1000 in
   for i = 0 to 1000
   do
     let random_padding = Bits.random_bytes (Random.int blocksize) in
     let fuzzed_input = Bytes.sub pathological_input 0 (pathological_size - Bytes.length random_padding) in
     let ciphertext = encryption_oracle fuzzed_input in
-    let block = get_ecb_end_block ciphertext blocksize in
-    let v = Hashtbl.find_default repetition_table block 0 in
-    Hashtbl.replace repetition_table block (v + 1)
+    let blocks = get_cipher_blocks ciphertext blocksize in
+    List.iter (fun block ->
+      let v = Hashtbl.find_default repetition_table block 0 in
+      Hashtbl.replace repetition_table block (v + 1)) blocks
   done;
-  Hashtbl.iter (fun k v ->
-    if v > 1 then
-      Printf.printf "k=%s v=%d\n" (to_hex_string k) v
-    else
-      ()
-  ) repetition_table;
-  let b1 = guess_byte (Bytes.create 0) blocksize repetition_table in
-  Printf.printf "%c\n" (Char.chr b1);
-  let b2 = guess_byte (Bytes.make 1 (Char.chr b1)) blocksize repetition_table in
-  Printf.printf "%d %d\n" b1 b2;
-  ()
+  let guessed = List.fold_left (fun bytes n ->
+    match guess_byte bytes blocksize repetition_table with
+    | Some b -> Bytes.cat bytes (Bytes.make 1 (Char.chr b))
+    | None -> bytes)
+    (Bytes.create 0)
+    (Util.range 0 (Hashtbl.length repetition_table)) in
+  assert (String.starts_with (Bytes.to_string guessed) (Bytes.to_string (from_base64_string magic_text)));
+  Printf.printf "🎉 All assertions complete! 🎉\n"
