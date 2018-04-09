@@ -20,8 +20,7 @@ Think "STIMULUS" and "RESPONSE".
 let _ = Random.self_init ()
 let random_key = Bytes.to_string (Bits.random_bytes 16)
 let magic_text = (BatEnum.fold (^) "" (File.lines_of "12.txt"))
-(* Code currently won't work if the prefix is > blocksize *)
-let fixed_prefix = Bits.random_bytes (Random.int 8 + 16)
+let fixed_prefix = Bits.random_bytes (Random.int 32 + 16)
 
 let encryption_oracle input =
   let combined_input = (Bytes.cat input (from_base64_string magic_text)) in
