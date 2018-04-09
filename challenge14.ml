@@ -20,6 +20,7 @@ Think "STIMULUS" and "RESPONSE".
 let _ = Random.self_init ()
 let random_key = Bytes.to_string (Bits.random_bytes 16)
 let magic_text = (BatEnum.fold (^) "" (File.lines_of "12.txt"))
+(* Code currently won't work if the prefix is > blocksize *)
 let fixed_prefix = Bits.random_bytes (Random.int 8 + 5)
 
 let encryption_oracle input =
@@ -52,14 +53,10 @@ let run () =
   let blocksize = Decrypto.guess_blocksize encryption_oracle in
   let prefix_length = find_prefix_length encryption_oracle blocksize in
   let secret_length = guess_secret_length encryption_oracle blocksize prefix_length in
-  Printf.printf "guessed secret length = %d actual secret length = %d prefix = %d\n"
-    secret_length
-    (Bytes.length (from_base64_string magic_text))
-    prefix_length;
   let decrypted = List.fold_left (fun bytes n ->
     let b = guess_byte encryption_oracle bytes prefix_length blocksize in
     Bytes.cat bytes (Bytes.make 1 (Char.chr b)))
     (Bytes.create 0)
     (Util.range 0 secret_length) in
   assert (String.equal (Bytes.to_string decrypted) (Bytes.to_string (from_base64_string magic_text)));
-  ()
+  Printf.printf "🎉 All assertions complete! 🎉\n"
