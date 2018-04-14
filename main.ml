@@ -12,5 +12,7 @@ let _ =
     Challenge11.run();
     Challenge12.run();
     Challenge13.run();
-    Challenge14.run()
+    Challenge14.run();
+    Challenge15.run();
+    ()
 ;;

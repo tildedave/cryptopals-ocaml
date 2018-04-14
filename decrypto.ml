@@ -87,7 +87,6 @@ let guess_byte encryption_func known prefix_length blocksize =
     let encrypted_block = Bits.nth_block ciphertext (which_block + prefix_offset + 1) blocksize in
     Hashtbl.replace all_options_hash encrypted_block c
   done;
-  assert ((Hashtbl.length all_options_hash) == 256);
   (* should not need to return the prefix here *)
   let input = (Bytes.make (num_bytes - i - 1) 'A') in
   let block = Bits.nth_block (encryption_func input) (which_block + prefix_offset + 1) blocksize in

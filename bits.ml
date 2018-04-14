@@ -83,6 +83,7 @@ let num_repetitions bytes block_size =
 let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
 
 let first_block bytes = nth_block bytes 0
+let last_block bytes blocksize = nth_block bytes ((Bytes.length bytes - 1) / blocksize) blocksize
 
 let repeat_block block i =
   let blocksize = Bytes.length block in
