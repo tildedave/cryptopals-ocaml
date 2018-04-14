@@ -67,6 +67,7 @@ let run () =
   let equal_flip, semi_flip = mapt2 String.of_char (lxor_char '=' (Char.chr 8), lxor_char ';' (Char.chr 8)) in
   let attack_text = semi_flip ^ "role" ^ equal_flip ^ "admin" ^ semi_flip in
   let ciphertext = encrypt_user_data attack_text in
+  assert (not (is_admin ciphertext));
   let mod_block = nth_block ciphertext 1 16 in
   bytes_xor mod_block 0 (Char.chr 8);
   bytes_xor mod_block 5 (Char.chr 8);
