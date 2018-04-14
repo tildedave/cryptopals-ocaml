@@ -39,6 +39,8 @@ let bytes_apply f bytes1 bytes2 =
   assert (Bytes.length bytes1 == Bytes.length bytes2);
   Bytes.mapi (fun n b -> f b (Bytes.get bytes2 n)) bytes1
 
+let bytes_xor bytes i c = Bytes.set bytes i (lxor_char (Bytes.get bytes i) c)
+
 let fixed_xor bytes1 bytes2 = bytes_apply lxor_char bytes1 bytes2
 
 let repeating_key_xor bytes key =
@@ -84,6 +86,7 @@ let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
 
 let first_block bytes = nth_block bytes 0
 let last_block bytes blocksize = nth_block bytes ((Bytes.length bytes - 1) / blocksize) blocksize
+let replace_block bytes block i blocksize = Bytes.blit block 0 bytes (i * blocksize) blocksize
 
 let repeat_block block i =
   let blocksize = Bytes.length block in

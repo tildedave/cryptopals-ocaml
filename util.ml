@@ -50,3 +50,8 @@ let split_bytes bytes size =
       Hashtbl.replace buckets k (Bytes.cat bucket (Bytes.make 1 c))
     ) bytes;
     List.fold_left (fun acc n -> Hashtbl.find buckets n :: acc) [] (List.rev (range 0 size))
+
+let rec replace_all str sub by =
+  let b, s = String.replace str sub by in if b then replace_all s sub by else s
+
+let assert_strings_equal str expected = assert (String.equal str expected)
