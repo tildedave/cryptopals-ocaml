@@ -1,5 +1,6 @@
 open Bits
 open Encoding
+open Padding
 
 (*
 PKCS#7 padding validation
@@ -20,19 +21,6 @@ If you are writing in a language with exceptions, like Python or Ruby, make your
 
 Crypto nerds know where we're going with this. Bear with us.
 *)
-
-exception Bad_Padding
-
-let strip_pkcs7_padding plaintext blocksize =
-  let block = last_block plaintext blocksize in
-  let c = Char.code (Bytes.get plaintext (blocksize - 1)) in
-  if c > 16 then
-    (* no strip *)
-    plaintext
-  else
-    let padding_area = Bytes.sub plaintext (blocksize - c) c in
-    Bytes.iter (fun b -> if (Char.code b) <> c then raise Bad_Padding else ()) padding_area;
-    Bytes.sub plaintext 0 (blocksize - c)
 
 let run () =
   Printf.printf "*** CHALLENGE 15: PKCS#7 padding validation ***\n";

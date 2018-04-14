@@ -1,6 +1,7 @@
 open Batteries
 open Bits
 open Encoding
+open Padding
 open Util
 
 (*

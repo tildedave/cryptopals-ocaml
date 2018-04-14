@@ -2,6 +2,7 @@ open Batteries
 open Crypto
 open Decrypto
 open Encoding
+open Padding
 open Util
 
 (*
