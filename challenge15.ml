@@ -38,5 +38,4 @@ let run () =
   test_plaintext "ICE ICE BABY\x04\x04\x04\x04" "ICE ICE BABY";
   test_plaintext_failure "ICE ICE BABY\x05\x05\x05\x05";
   test_plaintext_failure "ICE ICE BABY\x01\x02\x03\x04";
-  test_plaintext "YELLOW SUBMARINE" "YELLOW SUBMARINE";
   Printf.printf "🎉 All assertions complete! 🎉\n"

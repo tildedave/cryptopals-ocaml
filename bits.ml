@@ -86,7 +86,10 @@ let nth_block bytes i blocksize = Bytes.sub bytes (i * blocksize) blocksize
 
 let first_block bytes = nth_block bytes 0
 let last_block bytes blocksize = nth_block bytes ((Bytes.length bytes - 1) / blocksize) blocksize
-let replace_block bytes block i blocksize = Bytes.blit block 0 bytes (i * blocksize) blocksize
+let replace_block bytes block i blocksize =
+  let bytes_copy = Bytes.copy bytes in
+  Bytes.blit block 0 bytes_copy (i * blocksize) blocksize;
+  bytes_copy
 
 let repeat_block block i =
   let blocksize = Bytes.length block in

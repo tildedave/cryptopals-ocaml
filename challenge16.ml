@@ -73,7 +73,7 @@ let run () =
   bytes_xor mod_block 0 (Char.chr 8);
   bytes_xor mod_block 5 (Char.chr 8);
   bytes_xor mod_block 11 (Char.chr 8);
-  replace_block ciphertext mod_block 1 16;
-  assert (is_admin ciphertext);
+  let modified_ciphertext = replace_block ciphertext mod_block 1 16 in
+  assert (is_admin modified_ciphertext);
   Printf.printf "🎉 All assertions complete! 🎉\n";
   ()

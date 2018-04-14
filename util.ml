@@ -55,3 +55,10 @@ let rec replace_all str sub by =
   let b, s = String.replace str sub by in if b then replace_all s sub by else s
 
 let assert_strings_equal str expected = assert (String.equal str expected)
+
+let bytes_to_hex_string bytes =
+  let s = ref "" in
+  for i = 0 to Bytes.length bytes - 1 do
+    s := (!s) ^ (Printf.sprintf "%x" (Char.code (Bytes.get bytes i)))
+  done;
+  !s
