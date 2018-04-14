@@ -82,25 +82,22 @@ let next_byte_via_padding_oracle block target_block known blocksize =
   let len_known = Bytes.length known in
   let padding_char = Char.chr (len_known + 1) in
   let block_copy = Bytes.copy block in
+  let target_idx = blocksize - len_known - 1 in
   let c = ref 0 in
+  (if len_known > 0 then
+    for i = blocksize - 1 downto blocksize - len_known do
+      let known_byte = Bytes.get known (blocksize - i - 1) in
+      let intermediate = lxor_char known_byte (Bytes.get block i) in
+      let flipped_byte = lxor_char intermediate padding_char in
+      Bytes.set block_copy i flipped_byte
+    done
+  else
+    ());
   try
     while !c < 256 do
       let chr = Char.chr !c in
-      let target_idx = (blocksize - len_known - 1) in
       (if Bytes.get block_copy target_idx <> chr then
         begin
-          (* For each in known *)
-          if len_known > 0 then
-            begin
-              for i = blocksize - 1 to blocksize - len_known do
-                let known_byte = Bytes.get known (blocksize - i - 1) in
-                let intermediate = lxor_char known_byte (Bytes.get block i) in
-                let flipped_byte = lxor_char intermediate padding_char in
-                Bytes.set block_copy i flipped_byte
-              done
-            end
-          else
-            ();
           Bytes.set block_copy target_idx chr;
           if check_padding target_block block_copy then
             raise Exit
@@ -120,12 +117,19 @@ let next_byte_via_padding_oracle block target_block known blocksize =
 let run () =
   Printf.printf "*** CHALLENGE 17: The CBC padding oracle ***\n";
   let ciphertext, iv = encrypt_function () in
-  Printf.printf "ciphertext len=%d\n" (Bytes.length ciphertext);
-  Printf.printf "%s\n" (Util.bytes_to_hex_string (Bytes.of_string "bananas"));
   assert (check_padding ciphertext iv);
-  let block = iv in
-  let target_block = nth_block ciphertext 0 16 in
-  let next = next_byte_via_padding_oracle block target_block (Bytes.create 0) 16 in
-  let next_after = next_byte_via_padding_oracle block target_block (Bytes.make 1 next) 16 in
-  Printf.printf "good: %c %c\n" next next_after;
+  let first_block_decoded = List.fold_left
+    (fun known n ->
+      let next_char = next_byte_via_padding_oracle iv (nth_block ciphertext 0 16) known 16 in
+      Bytes.cat known (Bytes.make 1 next_char))
+    (Bytes.create 0)
+    (Util.range 0 16) in
+  Printf.printf "first block: %s\n" (String.rev (Bytes.to_string first_block_decoded));
+  let second_block_decoded = List.fold_left
+    (fun known n ->
+      let next_char = next_byte_via_padding_oracle (nth_block ciphertext 0 16) (nth_block ciphertext 1 16) known 16 in
+      Bytes.cat known (Bytes.make 1 next_char))
+    (Bytes.create 0)
+    (Util.range 0 16) in
+  Printf.printf "second block: %s\n" (String.rev (Bytes.to_string second_block_decoded));
   ()
