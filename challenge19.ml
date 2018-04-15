@@ -147,7 +147,6 @@ let test_keystream_char c pos =
       if pos < Bytes.length line then
         (let d = Bytes.get line pos in
         let plaintext_char = lxor_char (Char.chr c) d in
-        Printf.printf "char at pos=%d is d=%c, c lxor d=%c (%d)\n" pos d plaintext_char (Char.code plaintext_char);
         Set.add plaintext_char acc)
       else acc)
     Set.empty
@@ -160,7 +159,11 @@ let test_decryption c pos lines =
   lines
 
 let print_char_set c set =
-  Printf.printf "c=%d, set=>>> %s <<<\n" c (Set.fold (fun c acc -> String.of_char c ^ " " ^ acc) set "")
+  if Set.exists (fun d -> let code = Char.code d in code < 32 || code > 127) set then
+    ()
+  else
+    Printf.printf "c=%d, set=>>> %s <<<\n" c (Set.fold (fun c acc -> String.of_char c ^
+      (Printf.sprintf " (%d) " (Char.code c)) ^ acc) set "")
 
 let run () =
   Printf.printf "*** CHALLENGE 19: Break fixed-nonce CTR mode using substitutions ***\n";
@@ -184,15 +187,43 @@ let run () =
   (* position 2 = 32 also ??? :| *)
   (* position 3 =  :| *)
   (* position 12 = 32 *)
-  List.iter
-    (fun c -> print_char_set c (test_keystream_char (224 lxor c) 3))
-    (Util.range 0 255);
+  (* List.iter
+    (fun c -> print_char_set c (test_keystream_char (179 lxor c) 1))
+    (Util.range 0 255); *)
+  let char_for_line_at_pos line_no pos = Bytes.get (List.nth encrypted_lines line_no) pos in
+  Printf.printf "char for 0 --> %d\n" (Char.code (lxor_char (char_for_line_at_pos 20 0) 'W'));
   Printf.printf "---\n";
   (*
+    position 1 = 179 lxor 101
     position 2 = 32 lxor 224
     position 3 = 32 lxor 112
+
+    position 0 = 84 lxor 78  = 65 lxor 91 = 26
+      also possible 78 lxor 116  84
   *)
-  List.iter
-    (fun line -> Printf.printf "%s\n" (Bytes.to_string line))
-    (test_decryption (Char.chr (32 lxor 224)) 3 (test_decryption (Char.chr (32 lxor 112)) 2 encrypted_lines))
+
+  if true then
+    List.iteri
+      (fun n line -> Printf.printf "n=%d %s\n" n (Bytes.to_string line))
+      (List.fold_lefti
+        (fun acc pos c -> test_decryption c pos acc)
+        encrypted_lines
+        [Char.chr 26;
+         Char.chr (179 lxor 101);
+         Char.chr (32 lxor 112);
+         Char.chr (32 lxor 224);
+         lxor_char (char_for_line_at_pos 3 4) 't';
+         lxor_char (char_for_line_at_pos 1 5) 'g';
+         lxor_char (char_for_line_at_pos 3 6) 'e';
+         lxor_char (char_for_line_at_pos 3 7) 'n';
+         lxor_char (char_for_line_at_pos 5 8) 'e';
+         lxor_char (char_for_line_at_pos 11 9) 'e';
+         lxor_char (char_for_line_at_pos 0 10) ' ';
+         lxor_char (char_for_line_at_pos 1 11) ' ';
+         lxor_char (char_for_line_at_pos 0 12) 'h';
+         lxor_char (char_for_line_at_pos 0 13) 'e';
+         lxor_char (char_for_line_at_pos 0 14) ' ';
+       ])
+  else
+    ()
 
