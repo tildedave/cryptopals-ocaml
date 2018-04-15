@@ -242,7 +242,7 @@ let run () =
       let keystream_to_line = Bytes.sub keystream 0 (Bytes.length line) in
     fixed_xor line keystream_to_line)
     encrypted_lines in
-    List.iteri (fun n line -> Printf.printf "n=%d line=%s\n" n (Bytes.to_string line)) (List.take 50 decrypted);
+    List.iteri (fun n line -> Printf.printf "n=%d line=%s\n" n (Bytes.to_string line)) (List.take 10 decrypted);
   assert_strings_equal "Of a mocking tale or a gib" (Bytes.to_string (List.nth decrypted 9));
   assert_strings_equal "A terrible beauty is born." (Bytes.to_string (List.nth decrypted 39));
   Printf.printf "🎉 All assertions complete! 🎉\n";

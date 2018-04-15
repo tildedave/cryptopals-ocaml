@@ -1,7 +1,7 @@
 open Batteries
 open Bits
 open Encoding
-open Cryptokit
+open Util
 
 (*
 Challenge 6 - Break repeating-key XOR
@@ -32,12 +32,23 @@ This code is going to turn out to be surprisingly useful later on. Breaking repe
 
 *)
 
+let split_bytes bytes size =
+  let buckets = Hashtbl.create size in
+    List.iter (fun k -> Hashtbl.add buckets k Bytes.empty) (range 0 size);
+    Bytes.iteri (fun n c ->
+      let k = n mod size in
+      let bucket = Hashtbl.find buckets k in
+      (* this is stupid inefficient *)
+      Hashtbl.replace buckets k (Bytes.cat bucket (Bytes.make 1 c))
+    ) bytes;
+    List.fold_left (fun acc n -> Hashtbl.find buckets n :: acc) [] (List.rev (range 0 size))
+
 let run () =
   Printf.printf "*** CHALLENGE 6: Break repeating-key XOR ***\n";
   let cipher = from_base64_string (BatEnum.fold (^) "" (File.lines_of "6.txt")) in
   let guessed_keysize = 29 in
   let key = Bytes.create guessed_keysize in
-  let buckets = Util.split_bytes cipher guessed_keysize in
+  let buckets = split_bytes cipher guessed_keysize in
   begin
     List.iteri (fun k v ->
       let (i, s, loser, candidate) = Decrypto.brute_force_single_xor v in

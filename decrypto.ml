@@ -9,6 +9,7 @@ let choose_best_analysis vector_list =
     let (_, best_so_far, _, _) = best_candidate in
     if score > best_so_far then
       begin
+        (* Printf.printf "%d %s\n" (fst vec) (Textanalysis.to_string ta); *)
         (fst vec, score, best_so_far, snd vec)
       end
     else
