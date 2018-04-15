@@ -2,6 +2,7 @@ open Batteries
 open Bits
 open Crypto
 open Encoding
+open Util
 
 (*
 
@@ -138,7 +139,7 @@ let analyze_places () =
     let table = Hashtbl.find frequency_map n in
     Hashtbl.iter (fun k v ->
       Printf.printf "at position n=%d ---> %d occurred %d\n" n (Char.code k) v)
-    (Hashtbl.filter (fun v -> v >= 6) table))
+    (Hashtbl.filter (fun v -> v >= 10) table))
     (List.sort compare (List.of_enum (Hashtbl.keys frequency_map)))
 
 let test_keystream_char c pos =
@@ -191,8 +192,6 @@ let run () =
     (fun c -> print_char_set c (test_keystream_char (179 lxor c) 1))
     (Util.range 0 255); *)
   let char_for_line_at_pos line_no pos = Bytes.get (List.nth encrypted_lines line_no) pos in
-  Printf.printf "char for 0 --> %d\n" (Char.code (lxor_char (char_for_line_at_pos 20 0) 'W'));
-  Printf.printf "---\n";
   (*
     position 1 = 179 lxor 101
     position 2 = 32 lxor 224
@@ -201,29 +200,50 @@ let run () =
     position 0 = 84 lxor 78  = 65 lxor 91 = 26
       also possible 78 lxor 116  84
   *)
-
-  if true then
-    List.iteri
-      (fun n line -> Printf.printf "n=%d %s\n" n (Bytes.to_string line))
-      (List.fold_lefti
-        (fun acc pos c -> test_decryption c pos acc)
-        encrypted_lines
-        [Char.chr 26;
-         Char.chr (179 lxor 101);
-         Char.chr (32 lxor 112);
-         Char.chr (32 lxor 224);
-         lxor_char (char_for_line_at_pos 3 4) 't';
-         lxor_char (char_for_line_at_pos 1 5) 'g';
-         lxor_char (char_for_line_at_pos 3 6) 'e';
-         lxor_char (char_for_line_at_pos 3 7) 'n';
-         lxor_char (char_for_line_at_pos 5 8) 'e';
-         lxor_char (char_for_line_at_pos 11 9) 'e';
-         lxor_char (char_for_line_at_pos 0 10) ' ';
-         lxor_char (char_for_line_at_pos 1 11) ' ';
-         lxor_char (char_for_line_at_pos 0 12) 'h';
-         lxor_char (char_for_line_at_pos 0 13) 'e';
-         lxor_char (char_for_line_at_pos 0 14) ' ';
-       ])
-  else
-    ()
-
+  let chars_at_line line pos str =
+    let result = ref [] in
+    for i = pos + (String.length str) - 1 downto pos do
+      result := (i, lxor_char (char_for_line_at_pos line i) (String.get str (i - pos))) :: !result
+    done;
+    !result
+  in
+  (* obtained from guessing ciphertext with the above clues *)
+  let keystream =
+    let elements = [0, Char.chr 26;
+       1, Char.chr (179 lxor 101);
+       2, Char.chr (32 lxor 112);
+       3, Char.chr (32 lxor 224);
+       4, lxor_char (char_for_line_at_pos 3 4) 't';
+       5, lxor_char (char_for_line_at_pos 1 5) 'g';
+       6, lxor_char (char_for_line_at_pos 3 6) 'e';
+       7, lxor_char (char_for_line_at_pos 3 7) 'n';
+       8, lxor_char (char_for_line_at_pos 5 8) 'e';
+       9, lxor_char (char_for_line_at_pos 11 9) 'e';
+      ] @ (chars_at_line 0 10 " the")
+        @ (chars_at_line 6 14 "ed")
+        @ (chars_at_line 3 16 "ry")
+        @ (chars_at_line 5 18 "ess")
+        @ (chars_at_line 31 21 "ous")
+        @ (chars_at_line 2 24 "ng")
+        @ (chars_at_line 16 26 "nt")
+        @ (chars_at_line 32 28 "g")
+        @ (chars_at_line 29 30 "t")
+        @ (chars_at_line 25 31 "d")
+        @ (chars_at_line 4 32 "hea")
+        @ (chars_at_line 37 35 "rn,") in
+    let keystream_table = Hashtbl.create 40 in
+    List.iter (fun (pos, c) -> Hashtbl.replace keystream_table pos c) elements;
+    let num_bytes = List.hd (List.sort (fun a b -> compare b a) (List.of_enum (Hashtbl.keys keystream_table))) in
+    let keystream_bytes = Bytes.create (num_bytes + 1) in
+    Hashtbl.iter (Bytes.set keystream_bytes) keystream_table;
+    keystream_bytes in
+  let decrypted = List.mapi
+    (fun n line ->
+      let keystream_to_line = Bytes.sub keystream 0 (Bytes.length line) in
+    fixed_xor line keystream_to_line)
+    encrypted_lines in
+    List.iteri (fun n line -> Printf.printf "n=%d line=%s\n" n (Bytes.to_string line)) (List.take 50 decrypted);
+  assert_strings_equal "Of a mocking tale or a gib" (Bytes.to_string (List.nth decrypted 9));
+  assert_strings_equal "A terrible beauty is born." (Bytes.to_string (List.nth decrypted 39));
+  Printf.printf "🎉 All assertions complete! 🎉\n";
+  ()
