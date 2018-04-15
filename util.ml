@@ -56,6 +56,8 @@ let rec replace_all str sub by =
 
 let assert_strings_equal str expected = assert (String.equal str expected)
 
+let assert_bytes_equal bytes expected = assert (Bytes.equal bytes expected)
+
 let bytes_to_hex_string bytes =
   let s = ref "" in
   for i = 0 to Bytes.length bytes - 1 do

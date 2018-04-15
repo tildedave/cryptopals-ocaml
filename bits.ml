@@ -91,6 +91,16 @@ let replace_block bytes block i blocksize =
   Bytes.blit block 0 bytes_copy (i * blocksize) blocksize;
   bytes_copy
 
+let num_blocks bytes blocksize = (Bytes.length bytes) / blocksize
+let reverse_bytes bytes = (* this is really dumb *)
+  let len = Bytes.length bytes in
+  let rev_bytes = Bytes.create len in
+  for i = 0 to len - 1 do
+    Bytes.set rev_bytes i (Bytes.get bytes (len - i - 1))
+  done;
+  rev_bytes
+
+
 let repeat_block block i =
   let blocksize = Bytes.length block in
   let bytes = Bytes.create (blocksize * i) in
