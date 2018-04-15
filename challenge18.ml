@@ -1,3 +1,4 @@
+open Crypto
 open Encoding
 open Util
 
@@ -39,26 +40,6 @@ This is the only block cipher mode that matters in good code.
 Most modern cryptography relies on CTR mode to adapt block ciphers into stream ciphers, because most of what we want to encrypt is better described as a stream than as a sequence of blocks. Daniel Bernstein once quipped to Phil Rogaway that good cryptosystems don't need the "decrypt" transforms. Constructions like CTR are what he was talking about.
 
 *)
-
-
-let ctr_stream_cipher key nonce ciphertext =
-  let cipher_length = Bytes.length ciphertext in
-  let key_bytes = Bytes.of_string key in
-  let blocksize = 16 in
-  let num_blocks = cipher_length / blocksize in
-  let i = ref 0 in
-  let counter = ref nonce in
-  let b = ref (Bytes.create 0) in
-  while !i < cipher_length - 1 do
-    let num_bytes = (min blocksize (cipher_length - !i - 1)) in
-    let current_key = Bytes.init blocksize (fun n -> Char.chr (if n == 8 then !counter else 0)) in
-    let keystream = Crypto.aes_ecb_encrypt current_key key in
-    let current_block = Bytes.sub ciphertext !i num_bytes in
-    b := Bytes.cat !b (Bits.fixed_xor (Bytes.sub keystream 0 num_bytes) current_block);
-    counter := !counter + 1;
-    i := !i + blocksize
-  done;
-  !b
 
 let run () =
   Printf.printf "*** CHALLENGE 18: Implement CTR, the stream cipher mode ***\n";

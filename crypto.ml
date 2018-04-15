@@ -48,3 +48,20 @@ let aes_cbc_encrypt bytes key iv =
     done;
     bytes_block
   end
+
+let ctr_stream_cipher key nonce ciphertext =
+  let cipher_length = Bytes.length ciphertext in
+  let blocksize = 16 in
+  let i = ref 0 in
+  let counter = ref nonce in
+  let b = ref (Bytes.create 0) in
+  while !i < cipher_length - 1 do
+    let num_bytes = (min blocksize (cipher_length - !i - 1)) in
+    let current_text = Bytes.init blocksize (fun n -> Char.chr (if n == 8 then !counter else 0)) in
+    let keystream = transform_bytes (aes_encrypt key) current_text in
+    let current_block = Bytes.sub ciphertext !i num_bytes in
+    b := Bytes.cat !b (Bits.fixed_xor (Bytes.sub keystream 0 num_bytes) current_block);
+    counter := !counter + 1;
+    i := !i + blocksize
+  done;
+  !b

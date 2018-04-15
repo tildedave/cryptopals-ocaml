@@ -73,6 +73,7 @@ let run () =
     [("foo","bar");("baz","qux");("zap","zazzle")];
   let q = profile_for "lucky@example.com" in
   let ciphertext = encrypted_profile_for "lucky@example.com" in
+  assert (String.starts_with (Hashtbl.find (decrypt_profile_for ciphertext) "role") "user");
   let blocksize = 16 in
   (* get an admin\PAD\PAD\PAD block *)
   let prefix = String.make (blocksize - (String.length "email=")) 'a' in
